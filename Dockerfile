@@ -43,11 +43,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxss1 \
     libxtst6 \
     libdouble-conversion3 \
-    fonts-liberation \
-    fonts-noto-core \
-    fonts-noto-color-emoji \
-    fonts-freefont-ttf \
-    fonts-droid-fallback \
+    fonts-wqy-zenhei \
+    && rm -rf /usr/share/icons/* /usr/share/doc/* /usr/share/man/* \
     && rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
 
 # Copy package files and install runtime dependencies
@@ -57,6 +54,7 @@ RUN npm ci --omit=dev --ignore-scripts \
 
 # Install Patchright Chromium headless shell
 RUN npx patchright install --with-deps --only-shell chromium \
+    && rm -rf /usr/share/icons/* /usr/share/doc/* /usr/share/man/* \
     && rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
 
 # Copy pre-compiled dist and scripts
@@ -65,6 +63,9 @@ COPY scripts ./scripts
 COPY src/config.example.json ./src/config.example.json
 COPY src/crontab.template /etc/cron.d/microsoft-rewards-cron.template
 COPY scripts/docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+
+# Remove non-runtime files (.d.ts and .map) from dist to save space
+RUN find ./dist -type f \( -name "*.d.ts" -o -name "*.d.ts.map" -o -name "*.js.map" \) -delete
 
 # Create the config directory and symlink config.json and accounts.json into
 # dist/ so the app finds them at its expected paths, while the entrypoint
