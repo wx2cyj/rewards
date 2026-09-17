@@ -46,6 +46,9 @@ services:
       ACCOUNT_3_EMAIL: "your_email_3@outlook.com"
       ACCOUNT_3_PASSWORD: "your_password_3"
 
+    ports:
+      - "3000:3000"  # Web 控制台端口
+
     volumes:
       - ./sessions:/usr/src/microsoft-rewards-script/dist/browser/sessions
       - ./config:/usr/src/microsoft-rewards-script/dist/config
@@ -55,6 +58,18 @@ services:
 ```bash
 docker compose up -d
 ```
+
+### Web 控制台界面
+
+容器启动后，在浏览器访问：
+```
+http://<飞牛NAS的IP>:3000
+```
+- **首次访问**：提示设置管理员用户名与密码；
+- **核心功能**：
+  - 实时可视化查看多账号任务进度、历史积分与曲线；
+  - 在线管理和增删账号、调整功能开关与 Cron 调度；
+  - 在线手动一键触发运行与实时日志流监控。
 
 查看日志：
 ```bash

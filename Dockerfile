@@ -74,5 +74,7 @@ RUN mkdir -p ./dist/config \
     && ln -s /usr/src/microsoft-rewards-script/dist/config/accounts.json ./dist/accounts.json \
     && chmod 755 /usr/local/bin/entrypoint.sh ./scripts/docker/*.sh
 
+EXPOSE 3000
+
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["sh", "-c", "echo 'Container started; cron is running.'"]

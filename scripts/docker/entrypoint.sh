@@ -223,9 +223,12 @@ envsubst < /etc/cron.d/microsoft-rewards-cron.template > /etc/cron.d/microsoft-r
 chmod 0644 /etc/cron.d/microsoft-rewards-cron
 crontab /etc/cron.d/microsoft-rewards-cron
 
-echo "[entrypoint] Cron configured with schedule: $CRON_SCHEDULE and timezone: $TZ; starting cron at $(date)"
+echo "[entrypoint] Cron configured with schedule: $CRON_SCHEDULE and timezone: $TZ; starting cron in background"
+cron
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 7. Start cron in foreground (PID 1)
+# 7. Start Web UI in foreground (PID 1)
 # ─────────────────────────────────────────────────────────────────────────────
-exec cron -f
+WEB_PORT="${WEB_UI_PORT:-3000}"
+echo "[entrypoint] Starting Web UI on port $WEB_PORT at $(date)"
+exec node "$DIST_DIR/web/server.js"

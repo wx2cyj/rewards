@@ -41,6 +41,9 @@ services:
       CONFIG_WORKER_PUNCH_CARDS: "true"
       CONFIG_WORKER_APP_PROMOTIONS: "true"
 
+    ports:
+      - "3000:3000"
+
     volumes:
       # 持久化存储会话（避免每次重复验证）与配置
       - ./sessions:/usr/src/microsoft-rewards-script/dist/browser/sessions
