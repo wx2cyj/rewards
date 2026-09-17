@@ -1,0 +1,17 @@
+import type { Page } from 'patchright';
+import { Workers } from '../../Workers';
+import type { BasePromotion } from '../../../interface/DashboardData';
+export declare class SearchOnBing extends Workers {
+    private bingHome;
+    private reportActivityUrl;
+    private cookieHeader;
+    private fingerprintHeader;
+    private gainedPoints;
+    private success;
+    private oldBalance;
+    doSearchOnBing(promotion: BasePromotion, page: Page): Promise<void>;
+    private searchBing;
+    private activateSearchTask;
+    private getSearchQueries;
+}
+//# sourceMappingURL=SearchOnBing.d.ts.map

@@ -1,0 +1,17 @@
+node_modules/
+dist/config/*.json
+dist/config/*.bak
+dist/browser/sessions/
+sessions/
+logs/
+diagnostics/
+blobs/
+index.json
+manifest.json
+oci-layout
+repositories
+*.log
+*.bak
+.env
+.DS_Store
+Thumbs.db

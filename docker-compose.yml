@@ -1,0 +1,47 @@
+services:
+  rewards:
+    image: wx2cyj/rewards:latest
+    container_name: rewards
+    restart: unless-stopped
+    environment:
+      # 时区设置（默认北京时间）
+      TZ: "Asia/Shanghai"
+      NODE_ENV: "production"
+
+      # 定时任务执行时间（默认每天早晨 7 点 0 分）
+      CRON_SCHEDULE: "0 7 * * *"
+
+      # 容器启动时是否立即运行一次任务（true / false）
+      RUN_ON_START: "true"
+
+      # 启动后是否随机延迟（NAS定时任务建议设为 false 或 true 随机睡眠几分钟）
+      SKIP_RANDOM_SLEEP: "true"
+
+      # ─────────── 账号配置 ───────────
+      # 支持多账号，按编号递增：
+      ACCOUNT_1_EMAIL: "your_email_1@outlook.com"
+      ACCOUNT_1_PASSWORD: "your_password_1"
+
+      ACCOUNT_2_EMAIL: "your_email_2@outlook.com"
+      ACCOUNT_2_PASSWORD: "your_password_2"
+
+      ACCOUNT_3_EMAIL: "your_email_3@outlook.com"
+      ACCOUNT_3_PASSWORD: "your_password_3"
+
+      # ─────────── 功能配置 ───────────
+      CONFIG_DEBUG_LOGS: "true"
+      CONFIG_WORKER_DAILY_SET: "true"
+      CONFIG_WORKER_CLAIM_BONUS_POINTS: "true"
+      CONFIG_WORKER_DESKTOP_SEARCH: "true"
+      CONFIG_WORKER_MOBILE_SEARCH: "true"
+      CONFIG_WORKER_DAILY_CHECKIN: "true"
+      CONFIG_WORKER_READ_TO_EARN: "true"
+      CONFIG_WORKER_SPECIAL_PROMOTIONS: "true"
+      CONFIG_WORKER_MORE_PROMOTIONS: "true"
+      CONFIG_WORKER_PUNCH_CARDS: "true"
+      CONFIG_WORKER_APP_PROMOTIONS: "true"
+
+    volumes:
+      # 持久化存储会话（避免每次重复验证）与配置
+      - ./sessions:/usr/src/microsoft-rewards-script/dist/browser/sessions
+      - ./config:/usr/src/microsoft-rewards-script/dist/config
