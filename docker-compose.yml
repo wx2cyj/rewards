@@ -1,6 +1,6 @@
 services:
   rewards:
-    image: wx2cyj/rewards:latest
+    image: wangxun2cyj1314/rewards:latest
     container_name: rewards
     restart: unless-stopped
     environment:

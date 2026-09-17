@@ -24,7 +24,7 @@
 ```yaml
 services:
   rewards:
-    image: wx2cyj/rewards:latest  # 或 ghcr.io/wx2cyj/rewards:latest
+    image: wangxun2cyj1314/rewards:latest  # 或 ghcr.io/wx2cyj/rewards:latest
     container_name: rewards
     restart: unless-stopped
     environment:
