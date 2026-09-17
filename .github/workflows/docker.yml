@@ -29,12 +29,9 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Log in to Docker Hub (if secrets provided)
-        if: "${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}"
+      - name: Log in to Docker Hub
+        if: ${{ secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != '' }}
         uses: docker/login-action@v3
-        env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -44,7 +41,7 @@ jobs:
         run: |
           TAGS="ghcr.io/${{ github.repository_owner }}/rewards:latest"
           if [ -n "${{ secrets.DOCKERHUB_USERNAME }}" ]; then
-            TAGS="$TAGS,${{ secrets.DOCKERHUB_USERNAME }}/rewards:latest"
+            TAGS="$TAGS,docker.io/${{ secrets.DOCKERHUB_USERNAME }}/rewards:latest"
           fi
           echo "tags=$TAGS" >> $GITHUB_OUTPUT
 
