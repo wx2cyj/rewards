@@ -147,6 +147,7 @@ function selectDetectedLoginState(foundStates) {
         return 'ERROR_ALERT';
     const priorities = [
         'ACCOUNT_LOCKED',
+        'TERMS_OF_USE',
         'PASSKEY_ERROR',
         'PASSKEY_VIDEO',
         'KMSI_PROMPT',
@@ -355,6 +356,17 @@ class Login {
             this.bot.logger.debug(this.bot.isMobile, 'DETECT-STATE', '账户锁定选择器被发现');
             return { state: 'ACCOUNT_LOCKED' };
         }
+        // 检测微软服务条款更新页面 (We're updating our terms / 服务条款 / account.live.com/tou/accrue)
+        const isTouPage = (url.hostname === 'account.live.com' || url.hostname === 'login.live.com') && (
+            url.pathname.startsWith('/tou/') ||
+            url.pathname.includes('/tou') ||
+            url.pathname.includes('/accrue') ||
+            url.pathname.includes('/consent')
+        );
+        if (isTouPage) {
+            this.bot.logger.info(this.bot.isMobile, 'DETECT-STATE', `检测到微软条款更新/同意页面: ${url.hostname}${url.pathname}`);
+            return { state: 'TERMS_OF_USE' };
+        }
         const rewardsPageState = classifyRewardsPageLoginState(page.url(), await this.checkSelector(page, this.selectors.rewardsSignIn));
         if (rewardsPageState === 'REWARDS_SIGN_IN') {
             return { state: rewardsPageState };
@@ -407,7 +419,8 @@ class Login {
             this.bot.logger.debug(this.bot.isMobile, 'DETECT-STATE', `检测到获取代码状态: ${codeState} (有密码: ${!!account?.password})`);
             results.push(codeState);
         }
-        if (!passwordEntry && !results.includes('PASSWORD_INPUT') && !results.includes('EMAIL_INPUT') && account?.password) {
+        const isStandardLoginPage = url.hostname.includes('login.live.com') || url.hostname.includes('login.microsoftonline.com');
+        if (isStandardLoginPage && !passwordEntry && !results.includes('PASSWORD_INPUT') && !results.includes('EMAIL_INPUT') && account?.password) {
             const hasPasswordOption = await this.checkSelector(page, this.selectors.passwordIcon);
             const hasOtherWays = await this.checkSelector(page, this.selectors.otherWaysToSignIn);
             if (hasPasswordOption) {
@@ -492,6 +505,19 @@ class Login {
             }
             case 'LOGGED_IN':
                 return true;
+            case 'TERMS_OF_USE': {
+                this.bot.logger.info(this.bot.isMobile, 'LOGIN', '检测到服务条款/协议更新页面 (Terms of Use)，正在自动确认并继续');
+                const selector = 'button[type="submit"], input[type="submit"], button#iNext, input#iNext, button#idSIButton9, input#idSIButton9, button[data-testid="primaryButton"], button:has-text("Next"), button:has-text("下一步"), button:has-text("接受"), button:has-text("同意"), button:has-text("继续")';
+                const nextBtn = await page.waitForSelector(selector, { state: 'visible', timeout: 5000 }).catch(() => null);
+                if (nextBtn) {
+                    await this.bot.browser.utils.ghostClick(page, selector);
+                    await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
+                    this.bot.logger.info(this.bot.isMobile, 'LOGIN', '服务条款已确认，继续跳转');
+                    return true;
+                }
+                this.bot.logger.warn(this.bot.isMobile, 'LOGIN', '未找到条款确认按钮');
+                return true;
+            }
             case 'REWARDS_SIGN_IN': {
                 this.bot.logger.info(this.bot.isMobile, 'LOGIN', 'Rewards 页面尚未登录，点击登录入口');
                 const signIn = await page
@@ -756,6 +782,24 @@ class Login {
                             this.bot.logger.info(this.bot.isMobile, 'LOGIN-BING', 'Cookie回退验证通过（首页视觉元素未找到但cookie有效），Bing会话验证成功');
                             return;
                         }
+                    }
+                }
+                // 处理服务协议/条款更新页面 (account.live.com/tou/accrue 等)
+                const isTouPage = (u.hostname === 'account.live.com' || u.hostname === 'login.live.com') && (
+                    u.pathname.startsWith('/tou/') ||
+                    u.pathname.includes('/tou') ||
+                    u.pathname.includes('/accrue') ||
+                    u.pathname.includes('/consent')
+                );
+                if (isTouPage) {
+                    this.bot.logger.info(this.bot.isMobile, 'LOGIN-BING', `检测到服务条款/协议更新页面 (${u.hostname}${u.pathname})，自动确认并接受`);
+                    const selector = 'button[type="submit"], input[type="submit"], button#iNext, input#iNext, button#idSIButton9, input#idSIButton9, button[data-testid="primaryButton"], button:has-text("Next"), button:has-text("下一步"), button:has-text("接受"), button:has-text("同意"), button:has-text("继续")';
+                    const nextBtn = await page.waitForSelector(selector, { state: 'visible', timeout: 5000 }).catch(() => null);
+                    if (nextBtn) {
+                        await this.bot.browser.utils.ghostClick(page, selector);
+                        await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
+                        this.bot.logger.info(this.bot.isMobile, 'LOGIN-BING', '服务条款已确认，等待跳转');
+                        continue;
                     }
                 }
                 // 处理 Bing 认证/身份验证中间页面（/fd/auth/、/identity/ 等）
