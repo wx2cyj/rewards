@@ -76,15 +76,18 @@ class ClaimBonusPoints extends Workers_1.Workers {
             return null;
         const newBalance = snapshot.points;
         const gainedPoints = Math.max(0, newBalance - this.oldBalance);
-        if (gainedPoints > 0) {
+        // 微软奖励横幅赠送的额外积分通常为 50/100/500/2530 等大礼包。
+        // 如果增量 <= 3 分，实为加载页面触发的单次必应搜索或访问奖励，不应计入领取奖励积分以避免抢占 PC 搜索额度。
+        const isRealBonus = gainedPoints > 3;
+        if (isRealBonus) {
             this.bot.recordPointGain('领取奖励积分', gainedPoints, newBalance);
         }
-        this.bot.logger.info(this.bot.isMobile, 'CLAIM-BONUS-POINTS', `领取奖励积分已复核 | status=${httpStatus ?? 'n/a'} | 获得积分=${gainedPoints} | 新余额=${newBalance} | source=${snapshot.source ?? 'dashboard'}`, gainedPoints > 0 ? 'green' : 'yellow');
+        this.bot.logger.info(this.bot.isMobile, 'CLAIM-BONUS-POINTS', `领取奖励积分已复核 | status=${httpStatus ?? 'n/a'} | 获得积分=${isRealBonus ? gainedPoints : 0} | 新余额=${newBalance} | source=${snapshot.source ?? 'dashboard'}`, isRealBonus ? 'green' : 'yellow');
         return {
             status: 'verified',
             oldBalance: this.oldBalance,
             newBalance,
-            gainedPoints,
+            gainedPoints: isRealBonus ? gainedPoints : 0,
             source: snapshot.source ?? 'dashboard'
         };
     }

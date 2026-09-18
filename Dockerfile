@@ -11,6 +11,7 @@ ENV NODE_ENV=production \
 # Install minimal system libraries required for Chromium headless to run,
 # plus jq (for config generation/patching) and gettext-base (for envsubst)
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    tini \
     cron \
     gettext-base \
     jq \
@@ -77,5 +78,5 @@ RUN mkdir -p ./dist/config \
 
 EXPOSE 3000
 
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/entrypoint.sh"]
 CMD ["sh", "-c", "echo 'Container started; cron is running.'"]

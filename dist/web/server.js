@@ -227,13 +227,14 @@ function startScriptRun(mode, options = {}) {
             : accountMode === 'failed'
                 ? accounts.filter(account => ['failed', 'interrupted'].includes(checkpointStates.get((0, TaskProgressStore_1.accountProgressHash)(account.email)) ?? 'pending')).length
                 : accounts.length;
+    const runSource = options.source ?? 'web';
     const child = (0, child_process_1.spawn)('bash', [script], {
         cwd: appRoot,
         stdio: ['ignore', 'pipe', 'pipe'],
         env: {
             ...process.env,
             SKIP_RANDOM_SLEEP: 'true',
-            RUN_SOURCE: 'web',
+            RUN_SOURCE: runSource,
             RUN_MODE: mode,
             ...(0, RunAccountRequest_1.buildRunAccountEnvironment)(accountMode, accountIndex),
             ...(manualTask ? { MANUAL_TASK: manualTask } : {}),
@@ -246,14 +247,16 @@ function startScriptRun(mode, options = {}) {
         ? '账号状态检测'
         : manualTask
             ? `${manualTaskLabel(manualTask)}（${accountModeLabel(accountMode)}）`
-            : `手动运行（${accountModeLabel(accountMode)}）`;
+            : runSource === 'cron'
+                ? `定时任务（${accountModeLabel(accountMode)}）`
+                : `手动运行（${accountModeLabel(accountMode)}）`;
     const selectionText = accountLabel
         ? ` | 实际选择: ${accountLabel} | 数量 ${selectedCount}/${accounts.length}`
         : ` | 账号数量 ${selectedCount}/${accounts.length}`;
     const startedLine = (0, logSanitizer_1.stampLogLine)(`${label}已启动，PID ${child.pid}${selectionText}`);
     runState = {
         running: true,
-        source: 'web',
+        source: runSource,
         mode,
         accountMode,
         accountIndex,
@@ -2426,8 +2429,78 @@ async function handleRequest(req, res) {
         });
     }
 }
+function matchCronField(expr, val) {
+    if (expr === '*' || expr === '?') return true;
+    for (const part of expr.split(',')) {
+        const trimmed = part.trim();
+        if (trimmed.includes('/')) {
+            const [range, stepStr] = trimmed.split('/');
+            const step = parseInt(stepStr, 10);
+            if (!step || isNaN(step)) continue;
+            if (range === '*' || range === '') {
+                if (val % step === 0) return true;
+            } else if (range.includes('-')) {
+                const [min, max] = range.split('-').map(Number);
+                if (val >= min && val <= max && (val - min) % step === 0) return true;
+            }
+        } else if (trimmed.includes('-')) {
+            const [min, max] = trimmed.split('-').map(Number);
+            if (val >= min && val <= max) return true;
+        } else if (parseInt(trimmed, 10) === val) {
+            return true;
+        }
+    }
+    return false;
+}
+function matchesCron(schedule, date) {
+    const fields = schedule.trim().split(/\s+/);
+    if (fields.length !== 5) return false;
+    const [m, h, dom, mon, dow] = fields;
+    return (
+        matchCronField(m, date.getMinutes()) &&
+        matchCronField(h, date.getHours()) &&
+        matchCronField(dom, date.getDate()) &&
+        matchCronField(mon, date.getMonth() + 1) &&
+        matchCronField(dow, date.getDay())
+    );
+}
+function getNowInTimezone(tz) {
+    try {
+        const str = new Date().toLocaleString('en-US', { timeZone: tz });
+        return new Date(str);
+    } catch {
+        return new Date();
+    }
+}
+let lastCronMinuteKey = '';
+function startInternalScheduler() {
+    console.log('[scheduler] 内置定时调度引擎已启动 (每20秒自检调度)');
+    setInterval(() => {
+        try {
+            const schedInfo = currentSchedule();
+            const sched = schedInfo?.schedule;
+            if (!sched || typeof sched !== 'string') return;
+            const tz = schedInfo?.timezone || process.env.TZ || 'Asia/Shanghai';
+            const now = getNowInTimezone(tz);
+            const minuteKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            if (minuteKey === lastCronMinuteKey) return;
+            if (matchesCron(sched, now)) {
+                lastCronMinuteKey = minuteKey;
+                console.log(`[scheduler] 定时任务触发 (CRON: "${sched}", 时区: ${tz}, 当前时间: ${minuteKey})`);
+                if (!runState.running) {
+                    startScriptRun('task', { accountMode: 'continue', source: 'cron' });
+                } else {
+                    console.log('[scheduler] 已有任务正在运行中，本次定时触发跳过');
+                }
+            }
+        } catch (e) {
+            console.error('[scheduler] 调度自检异常:', e.message);
+        }
+    }, 20000);
+}
 function start() {
     ensureRuntimeFiles();
+    startInternalScheduler();
     const port = Number(process.env.WEB_UI_PORT ?? process.env.PORT ?? 3000);
     const host = process.env.WEB_UI_HOST ?? '0.0.0.0';
     http_1.default.createServer((req, res) => {

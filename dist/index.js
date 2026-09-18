@@ -1332,12 +1332,15 @@ class MicrosoftRewardsBot {
                     gained: mobileGainedPoints,
                     status: finalMobileStatus
                 });
+                const actualPcSearchGained = finalPcTotal > 0
+                    ? Math.max(desktopGainedPoints, finalPcCompleted - (initialDesktopCompleted ?? 0))
+                    : desktopGainedPoints;
                 taskSummary.push({
                     key: 'desktop',
                     label: 'PC 搜索',
                     completed: finalPcCompleted,
                     total: finalPcTotal,
-                    gained: desktopGainedPoints,
+                    gained: actualPcSearchGained,
                     status: finalPcStatus
                 });
                 if (otherGainedPoints > 0) {
