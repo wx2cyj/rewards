@@ -85,6 +85,7 @@ class Search extends Workers_1.Workers {
             await this.bot.browser.utils.tryDismissAllMessages(page);
             let stagnantLoop = 0;
             const stagnantLoopMax = 10;
+            let isStagnant = false;
             for (let i = 0; i < queries.length; i++) {
                 if (Date.now() >= roundDeadline) {
                     throw new Error(`搜索整轮超时: ${roundTimeoutMs}ms`);
@@ -120,7 +121,8 @@ class Search extends Workers_1.Workers {
                     break;
                 }
                 if (stagnantLoop > stagnantLoopMax) {
-                    this.bot.logger.warn(isMobile, 'SEARCH-BING', `搜索在 ${stagnantLoopMax} 次迭代中未获得积分，中止主搜索循环`);
+                    this.bot.logger.warn(isMobile, 'SEARCH-BING', `搜索在 ${stagnantLoopMax} 次迭代中未获得积分，判定为无搜索额度或已达上限，优雅退出`);
+                    isStagnant = true;
                     stagnantLoop = 0;
                     break;
                 }
@@ -141,7 +143,7 @@ class Search extends Workers_1.Workers {
                     this.bot.logger.debug(isMobile, 'SEARCH-BING', `查询池已重新生成 | count=${queries.length}`);
                 }
             }
-            if (missingPointsTotal > 0) {
+            if (missingPointsTotal > 0 && !isStagnant) {
                 this.bot.logger.info(isMobile, 'SEARCH-BING', `搜索完成但仍有积分缺失，继续使用重新生成的查询 | remaining=${missingPointsTotal}`);
                 let stagnantLoop = 0;
                 const stagnantLoopMax = 5;
@@ -194,8 +196,8 @@ class Search extends Workers_1.Workers {
                         if (stagnantLoop > stagnantLoopMax) {
                             this.bot.logger.warn(isMobile, 'SEARCH-BING-EXTRA', `搜索在 ${stagnantLoopMax} 次迭代中未获得积分，中止额外搜索`);
                             const finalBalance = Number(this.bot.userData.currentPoints ?? startBalance);
-                            this.bot.logger.info(isMobile, 'SEARCH-BING', `中止额外搜索 | startBalance=${startBalance} | finalBalance=${finalBalance}`);
-                            throw new Error(`搜索停滞，保留部分进度: gained=${totalGainedPoints}, remaining=${missingPointsTotal}`);
+                            this.bot.logger.info(isMobile, 'SEARCH-BING', `优雅结束额外搜索 | startBalance=${startBalance} | finalBalance=${finalBalance} | totalGained=${totalGainedPoints}`);
+                            break;
                         }
                     }
                 }

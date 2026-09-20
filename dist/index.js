@@ -1264,14 +1264,18 @@ class MicrosoftRewardsBot {
                 let desktopGainedPoints = 0;
                 let otherGainedPoints = 0;
                 if (searchGainedPoints > 0 && estimatedSearchPoints > 0) {
-                    mobileGainedPoints = Math.round((searchGainedPoints * Math.max(0, mobilePoints)) / estimatedSearchPoints);
-                    desktopGainedPoints = searchGainedPoints - mobileGainedPoints;
+                    const searchPointsCap = Math.min(searchGainedPoints, estimatedSearchPoints);
+                    mobileGainedPoints = Math.min(mobilePoints, Math.round((searchPointsCap * Math.max(0, mobilePoints)) / estimatedSearchPoints));
+                    desktopGainedPoints = Math.min(desktopPoints, searchPointsCap - mobileGainedPoints);
+                    otherGainedPoints = Math.max(0, searchGainedPoints - (mobileGainedPoints + desktopGainedPoints));
                 }
                 else if (searchGainedPoints > 0 && mobilePoints > 0) {
-                    mobileGainedPoints = searchGainedPoints;
+                    mobileGainedPoints = Math.min(mobilePoints, searchGainedPoints);
+                    otherGainedPoints = Math.max(0, searchGainedPoints - mobileGainedPoints);
                 }
                 else if (searchGainedPoints > 0 && desktopPoints > 0) {
-                    desktopGainedPoints = searchGainedPoints;
+                    desktopGainedPoints = Math.min(desktopPoints, searchGainedPoints);
+                    otherGainedPoints = Math.max(0, searchGainedPoints - desktopGainedPoints);
                 }
                 else {
                     otherGainedPoints = searchGainedPoints;
@@ -1333,7 +1337,7 @@ class MicrosoftRewardsBot {
                     status: finalMobileStatus
                 });
                 const actualPcSearchGained = finalPcTotal > 0
-                    ? Math.max(desktopGainedPoints, finalPcCompleted - (initialDesktopCompleted ?? 0))
+                    ? Math.min(finalPcTotal, Math.max(desktopGainedPoints, finalPcCompleted - (initialDesktopCompleted ?? 0)))
                     : desktopGainedPoints;
                 taskSummary.push({
                     key: 'desktop',
@@ -1346,9 +1350,9 @@ class MicrosoftRewardsBot {
                 if (otherGainedPoints > 0) {
                     taskSummary.push({
                         key: 'other',
-                        label: '其他积分变化',
+                        label: '其他奖励/迎新里程碑',
                         gained: otherGainedPoints,
-                        status: '已记录'
+                        status: '已完成'
                     });
                 }
                 (0, TaskProgressStore_1.updateTaskProgress)(accountEmail, 'daily', {
