@@ -755,10 +755,14 @@ class Login {
         this.bot.logger.info(this.bot.isMobile, 'LOGIN', '登录完成，会话已保存');
     }
     async verifyBingSession(page, account) {
-        const url = 'https://www.bing.com/fd/auth/signin?action=interactive&provider=windows_live_id&return_url=https%3A%2F%2Fwww.bing.com%2F';
+        const url = 'https://www.bing.com/fd/auth/signin?action=interactive&provider=windows_live_id&return_url=https%3A%2F%2Fwww.bing.com%2F%3Fensearch%3D1';
         const loopMax = 15;
         this.bot.logger.info(this.bot.isMobile, 'LOGIN-BING', '验证Bing会话');
         try {
+            await page.context().addCookies([
+                { name: 'SRCHHPGUSR', value: 'SRCHLANGV2=&CW=1920&CH=1080&DPR=1&UTC=480&DM=0&ENSEARCH=1', domain: '.bing.com', path: '/' },
+                { name: 'SRCHHPGUSR', value: 'SRCHLANGV2=&CW=1920&CH=1080&DPR=1&UTC=480&DM=0&ENSEARCH=1', domain: 'cn.bing.com', path: '/' }
+            ]).catch(() => {});
             await page.goto(url, { waitUntil: 'networkidle', timeout: 10000 }).catch(() => { });
             for (let i = 0; i < loopMax; i++) {
                 if (page.isClosed())

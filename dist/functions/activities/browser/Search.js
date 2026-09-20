@@ -73,8 +73,20 @@ class Search extends Workers_1.Workers {
             const roundDeadline = roundStartedAt + roundTimeoutMs;
             this.bot.logger.info(isMobile, 'SEARCH-BING', `搜索查询池准备就绪 | count=${queries.length}`);
             this.bot.logger.debug(isMobile, 'SEARCH-BING', `搜索超时预算 | queryTimeoutMs=${timeoutBudget.queryTimeoutMs} | roundTimeoutMs=${roundTimeoutMs} | searchDelayMaxMs=${timeoutBudget.stageTimeouts['search-delay']} | dashboardRefreshMs=${timeoutBudget.stageTimeouts['dashboard-refresh']}`);
-            // 跳转到bing
-            const targetUrl = this.searchPageURL ? this.searchPageURL : this.bingHome;
+            // 跳转到bing（确保使用国际版视图以正常累积微软 Rewards 积分）
+            try {
+                const cookiesToAdd = [
+                    { name: 'SRCHHPGUSR', value: 'SRCHLANGV2=&CW=1920&CH=1080&DPR=1&UTC=480&DM=0&ENSEARCH=1', domain: '.bing.com', path: '/' },
+                    { name: 'SRCHHPGUSR', value: 'SRCHLANGV2=&CW=1920&CH=1080&DPR=1&UTC=480&DM=0&ENSEARCH=1', domain: 'cn.bing.com', path: '/' },
+                    { name: '_EDGE_S', value: 'mkt=zh-cn', domain: '.bing.com', path: '/' },
+                    { name: '_EDGE_S', value: 'mkt=zh-cn', domain: 'cn.bing.com', path: '/' }
+                ];
+                await page.context().addCookies(cookiesToAdd).catch(() => {});
+            } catch {}
+            let targetUrl = this.searchPageURL ? this.searchPageURL : this.bingHome;
+            if (targetUrl.includes('bing.com') && !targetUrl.includes('ensearch=1')) {
+                targetUrl += (targetUrl.includes('?') ? '&' : '?') + 'ensearch=1';
+            }
             const target = new URL(targetUrl);
             this.bot.logger.debug(isMobile, 'SEARCH-BING', `导航到搜索页面 | host=${target.hostname} | path=${target.pathname}`);
             await page.goto(targetUrl, {
@@ -83,6 +95,17 @@ class Search extends Workers_1.Workers {
             });
             await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => { });
             await this.bot.browser.utils.tryDismissAllMessages(page);
+            // 检查是否停留在国内版，如果是则主动点击切换到"国际版"
+            try {
+                const intlSelector = 'a#est_en, a:has-text("国际版"), [data-testid="est_en"]';
+                const intlTab = await page.waitForSelector(intlSelector, { state: 'visible', timeout: 2000 }).catch(() => null);
+                if (intlTab) {
+                    this.bot.logger.info(isMobile, 'SEARCH-BING', '检测到"国际版"切换入口，主动切换到必应国际版以启用积分奖励');
+                    await this.bot.browser.utils.ghostClick(page, intlSelector);
+                    await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
+                    await this.bot.utils.wait(1500);
+                }
+            } catch {}
             let stagnantLoop = 0;
             const stagnantLoopMax = 10;
             let isStagnant = false;
@@ -251,7 +274,9 @@ class Search extends Workers_1.Workers {
             this.bot.logger.info(isMobile, 'SEARCH-BING', `返回主页以清除累积的页面上下文 | count=${this.searchCount} | threshold=${refreshThreshold}`);
             this.bot.logger.debug(isMobile, 'SEARCH-BING', `返回主页以刷新状态 | url=${this.bingHome}`);
             const cvid = (0, crypto_1.randomBytes)(16).toString('hex');
-            const url = `${this.bingHome}/search?q=${encodeURIComponent(query)}&PC=U531&FORM=ANNTA1&cvid=${cvid}`;
+            let baseBing = this.bingHome;
+            if (baseBing.includes('?')) baseBing = baseBing.split('?')[0];
+            const url = `${baseBing}/search?q=${encodeURIComponent(query)}&PC=U531&FORM=ANNTA1&cvid=${cvid}&ensearch=1`;
             await this.executeStage(searchPage, isMobile, controller, queryDeadline, 'search-box', timeoutBudget.navigationMs, async (signal) => {
                 signal.throwIfAborted();
                 await searchPage.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
@@ -279,6 +304,16 @@ class Search extends Workers_1.Workers {
                 });
                 await this.executeStage(searchPage, isMobile, controller, queryDeadline, 'submit', timeoutBudget.stageTimeouts.submit, async (signal) => {
                     await (0, SearchExecution_1.abortableWait)(1000, signal);
+                    await searchPage.evaluate(() => {
+                        const form = document.querySelector('#sb_form');
+                        if (form && !form.querySelector('input[name="ensearch"]')) {
+                            const input = document.createElement('input');
+                            input.type = 'hidden';
+                            input.name = 'ensearch';
+                            input.value = '1';
+                            form.appendChild(input);
+                        }
+                    }).catch(() => {});
                     await searchBox.click({ clickCount: 3, timeout: 5000 });
                     signal.throwIfAborted();
                     await searchBox.fill('');
