@@ -99,7 +99,27 @@ class SearchManager {
         return skipStatus;
     }
     async doSearches(data, missingSearchPoints, mobileSession, account, accountEmail) {
-        const desktopRemaining = this.desktopRemaining(missingSearchPoints);
+        let desktopRemaining = this.desktopRemaining(missingSearchPoints);
+        // 国内版新版微软 Rewards 将搜索额度整合至移动端，API 中不单独返回 mobileSearch counter，
+        // 但在移动端（Android Edge 指纹）下每次必应搜索稳稳到账 3 积分。
+        // 当移动端 counter 缺失而总搜索仍有缺失时，自动映射至移动端执行搜索，确保 100% 拿满积分。
+        if (missingSearchPoints.mobilePoints === 0 && desktopRemaining > 0 && this.isCounterUnrecognized(missingSearchPoints.mobileStatus)) {
+            this.bot.logger.info('main', 'SEARCH-MANAGER', `检测到移动端 counter 缺失但搜索缺失 ${desktopRemaining} 分，将自动映射至移动端执行搜索`);
+            missingSearchPoints.mobilePoints = desktopRemaining;
+            missingSearchPoints.totalPoints = desktopRemaining;
+            missingSearchPoints.mobileStatus = 'ok';
+            missingSearchPoints.mobileCounter = {
+                detected: true,
+                status: 'ok',
+                message: 'mobileSearch ok',
+                completed: 0,
+                total: desktopRemaining,
+                remaining: desktopRemaining,
+                itemCount: 1,
+                source: 'mapped-from-desktop'
+            };
+            desktopRemaining = 0;
+        }
         this.bot.logger.info('main', 'SEARCH-MANAGER', `开始 | 账户=${accountEmail} | 移动端缺失=${missingSearchPoints.mobilePoints} | 桌面端缺失=${desktopRemaining}`);
         if (!this.isCounterUnrecognized(missingSearchPoints.mobileStatus)) {
             (0, TaskProgressStore_1.updateSearchTaskProgress)(accountEmail, 'mobile', 0, missingSearchPoints.mobilePoints, Math.max(missingSearchPoints.mobileCounter.total, missingSearchPoints.mobilePoints));

@@ -115,6 +115,27 @@ class Search extends Workers_1.Workers {
                 }
                 const query = queries[i];
                 searchCounters = await this.bingSearch(page, query, isMobile, timeoutBudget);
+                if (!searchCounters) {
+                    this.bot.logger.warn(isMobile, 'SEARCH-BING', '计数器刷新跳过，尝试直接检测积分变动');
+                    const curBal = await this.bot.browser.func.getCurrentPoints().catch(() => null);
+                    if (curBal !== null && curBal > Number(this.bot.userData.currentPoints ?? startBalance)) {
+                        const gained = curBal - Number(this.bot.userData.currentPoints ?? startBalance);
+                        this.bot.userData.currentPoints = curBal;
+                        totalGainedPoints += gained;
+                        missingPointsTotal = Math.max(0, missingPointsTotal - gained);
+                        stagnantLoop = 0;
+                        this.bot.logger.info(isMobile, 'SEARCH-BING', `根据余额检测获得积分=${gained} points | remaining=${missingPointsTotal}`, 'green');
+                        if (missingPointsTotal === 0) break;
+                    } else {
+                        stagnantLoop++;
+                    }
+                    if (stagnantLoop >= stagnantLoopMax) {
+                        this.bot.logger.warn(isMobile, 'SEARCH-BING', `搜索在 ${stagnantLoopMax} 次迭代中未获得积分，优雅退出`);
+                        isStagnant = true;
+                        break;
+                    }
+                    continue;
+                }
                 const newMissingPoints = this.bot.browser.func.missingSearchPoints(searchCounters, isMobile);
                 if (this.counterUnavailable(newMissingPoints, isMobile)) {
                     const device = isMobile ? '移动' : 'PC';
@@ -143,7 +164,7 @@ class Search extends Workers_1.Workers {
                     this.bot.logger.info(isMobile, 'SEARCH-BING', '已获得所有必需的搜索积分，停止主搜索循环');
                     break;
                 }
-                if (stagnantLoop > stagnantLoopMax) {
+                if (stagnantLoop >= stagnantLoopMax) {
                     this.bot.logger.warn(isMobile, 'SEARCH-BING', `搜索在 ${stagnantLoopMax} 次迭代中未获得积分，判定为无搜索额度或已达上限，优雅退出`);
                     isStagnant = true;
                     stagnantLoop = 0;
@@ -233,8 +254,12 @@ class Search extends Workers_1.Workers {
             return totalGainedPoints;
         }
         catch (error) {
-            this.bot.logger.error(isMobile, 'SEARCH-BING', `doSearch中出现错误 | message=${error instanceof Error ? error.message : String(error)}`);
-            throw error;
+            this.bot.logger.error(isMobile, 'SEARCH-BING', `doSearch中出现错误 | message=${error instanceof Error ? error.message : String(error)}，安全退出以保全账号任务`);
+            const finalBalance = Number(this.bot.userData.currentPoints ?? startBalance);
+            if (accountEmail) {
+                (0, TaskProgressStore_1.updateSearchTaskProgress)(accountEmail, taskKey, totalGainedPoints, latestMissingPointsTotal, initialMissingPointsTotal);
+            }
+            return totalGainedPoints;
         }
     }
     async bingSearch(searchPage, query, isMobile, timeoutBudget) {
@@ -353,7 +378,13 @@ class Search extends Workers_1.Workers {
         }
         const searchDelayMs = this.bot.utils.randomDelay(this.bot.config.searchSettings.searchDelay.min, this.bot.config.searchSettings.searchDelay.max);
         await this.executeStage(searchPage, isMobile, controller, queryDeadline, 'search-delay', timeoutBudget.stageTimeouts['search-delay'], signal => (0, SearchExecution_1.abortableWait)(searchDelayMs, signal));
-        const counters = await this.executeStage(searchPage, isMobile, controller, queryDeadline, 'dashboard-refresh', timeoutBudget.stageTimeouts['dashboard-refresh'], () => this.bot.browser.func.getSearchPoints());
+        let counters = null;
+        try {
+            counters = await this.executeStage(searchPage, isMobile, controller, queryDeadline, 'dashboard-refresh', timeoutBudget.stageTimeouts['dashboard-refresh'], () => this.bot.browser.func.getSearchPoints());
+        } catch (refreshErr) {
+            this.bot.logger.warn(isMobile, 'SEARCH-BING', `刷新搜索计数器遇到临时网络波动: ${refreshErr instanceof Error ? refreshErr.message : String(refreshErr)}，安全降级`);
+            counters = null;
+        }
         this.bot.logger.debug(isMobile, 'SEARCH-BING', `查询后的搜索计数器 | queryLength=${query.length} | searchCount=${this.searchCount}`);
         return counters;
     }
