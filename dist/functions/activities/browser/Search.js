@@ -35,14 +35,21 @@ class Search extends Workers_1.Workers {
         const taskKey = isMobile ? 'mobile' : 'desktop';
         this.bot.logger.info(isMobile, 'SEARCH-BING', `开始必应搜索 | currentPoints=${startBalance}`);
         let totalGainedPoints = 0;
+        let missingPointsTotal = 0;
+        let initialMissingPointsTotal = 0;
+        let latestMissingPointsTotal = 0;
         const roundStartedAt = Date.now();
         try {
-            let searchCounters = await this.bot.browser.func.getSearchPoints();
-            const missingPoints = initialMissingPoints ?? this.bot.browser.func.missingSearchPoints(searchCounters, isMobile);
-            let missingPointsTotal = missingPoints.totalPoints;
-            const initialMissingPointsTotal = missingPointsTotal;
-            let latestMissingPointsTotal = missingPointsTotal;
-            if (this.counterUnavailable(missingPoints, isMobile)) {
+            let searchCounters = await this.bot.browser.func.getSearchPoints().catch(() => null);
+            const missingPoints = initialMissingPoints ?? (searchCounters ? this.bot.browser.func.missingSearchPoints(searchCounters, isMobile) : null);
+            if (!missingPoints) {
+                this.bot.logger.warn(isMobile, 'SEARCH-BING', '无法获取搜索初始计数器，安全退出');
+                return 0;
+            }
+            missingPointsTotal = missingPoints.totalPoints;
+            initialMissingPointsTotal = missingPointsTotal;
+            latestMissingPointsTotal = missingPointsTotal;
+            if (!initialMissingPoints && this.counterUnavailable(missingPoints, isMobile)) {
                 const device = isMobile ? '移动' : 'PC';
                 throw new Error(`${device}搜索额度未确认 | reason=${this.counterStatus(missingPoints, isMobile)} | source=${missingPoints.source}`);
             }
@@ -115,35 +122,35 @@ class Search extends Workers_1.Workers {
                 }
                 const query = queries[i];
                 searchCounters = await this.bingSearch(page, query, isMobile, timeoutBudget);
-                if (!searchCounters) {
-                    this.bot.logger.warn(isMobile, 'SEARCH-BING', '计数器刷新跳过，尝试直接检测积分变动');
+                let gainedPoints = 0;
+                let newMissingPointsTotal = missingPointsTotal;
+                let counterOk = false;
+
+                if (searchCounters) {
+                    const newMissingPoints = this.bot.browser.func.missingSearchPoints(searchCounters, isMobile);
+                    if (!this.counterUnavailable(newMissingPoints, isMobile)) {
+                        newMissingPointsTotal = newMissingPoints.totalPoints;
+                        const rawGained = missingPointsTotal - newMissingPointsTotal;
+                        gainedPoints = Math.max(0, rawGained);
+                        counterOk = true;
+                    }
+                }
+
+                // 若计数器未识别（如国内移动端搜索，接口中 mobileSearch counter 缺失），
+                // 直接通过检测用户实际账户余额变化计算获得积分
+                if (!counterOk) {
                     const curBal = await this.bot.browser.func.getCurrentPoints().catch(() => null);
-                    if (curBal !== null && curBal > Number(this.bot.userData.currentPoints ?? startBalance)) {
-                        const gained = curBal - Number(this.bot.userData.currentPoints ?? startBalance);
+                    const prevBal = Number(this.bot.userData.currentPoints ?? startBalance);
+                    if (curBal !== null && curBal > prevBal) {
+                        gainedPoints = curBal - prevBal;
                         this.bot.userData.currentPoints = curBal;
-                        totalGainedPoints += gained;
-                        missingPointsTotal = Math.max(0, missingPointsTotal - gained);
-                        stagnantLoop = 0;
-                        this.bot.logger.info(isMobile, 'SEARCH-BING', `根据余额检测获得积分=${gained} points | remaining=${missingPointsTotal}`, 'green');
-                        if (missingPointsTotal === 0) break;
+                        newMissingPointsTotal = Math.max(0, missingPointsTotal - gainedPoints);
                     } else {
-                        stagnantLoop++;
+                        gainedPoints = 0;
+                        newMissingPointsTotal = missingPointsTotal;
                     }
-                    if (stagnantLoop >= stagnantLoopMax) {
-                        this.bot.logger.warn(isMobile, 'SEARCH-BING', `搜索在 ${stagnantLoopMax} 次迭代中未获得积分，优雅退出`);
-                        isStagnant = true;
-                        break;
-                    }
-                    continue;
                 }
-                const newMissingPoints = this.bot.browser.func.missingSearchPoints(searchCounters, isMobile);
-                if (this.counterUnavailable(newMissingPoints, isMobile)) {
-                    const device = isMobile ? '移动' : 'PC';
-                    throw new Error(`搜索后${device}搜索额度未确认 | reason=${this.counterStatus(newMissingPoints, isMobile)} | source=${newMissingPoints.source}`);
-                }
-                const newMissingPointsTotal = newMissingPoints.totalPoints;
-                const rawGained = missingPointsTotal - newMissingPointsTotal;
-                const gainedPoints = Math.max(0, rawGained);
+
                 if (gainedPoints === 0) {
                     stagnantLoop++;
                     this.bot.logger.info(isMobile, 'SEARCH-BING', `未获得积分 ${stagnantLoop}/${stagnantLoopMax} | queryLength=${query.length} | remaining=${newMissingPointsTotal}`);
@@ -209,14 +216,33 @@ class Search extends Workers_1.Workers {
                         }
                         this.bot.logger.info(isMobile, 'SEARCH-BING-EXTRA', `额外搜索 | remaining=${missingPointsTotal} | queryLength=${query.length}`);
                         searchCounters = await this.bingSearch(page, query, isMobile, timeoutBudget);
-                        const newMissingPoints = this.bot.browser.func.missingSearchPoints(searchCounters, isMobile);
-                        if (this.counterUnavailable(newMissingPoints, isMobile)) {
-                            const device = isMobile ? '移动' : 'PC';
-                            throw new Error(`额外搜索后${device}搜索额度未确认 | reason=${this.counterStatus(newMissingPoints, isMobile)} | source=${newMissingPoints.source}`);
+                        let gainedPoints = 0;
+                        let newMissingPointsTotal = missingPointsTotal;
+                        let counterOk = false;
+
+                        if (searchCounters) {
+                            const newMissingPoints = this.bot.browser.func.missingSearchPoints(searchCounters, isMobile);
+                            if (!this.counterUnavailable(newMissingPoints, isMobile)) {
+                                newMissingPointsTotal = newMissingPoints.totalPoints;
+                                const rawGained = missingPointsTotal - newMissingPointsTotal;
+                                gainedPoints = Math.max(0, rawGained);
+                                counterOk = true;
+                            }
                         }
-                        const newMissingPointsTotal = newMissingPoints.totalPoints;
-                        const rawGained = missingPointsTotal - newMissingPointsTotal;
-                        const gainedPoints = Math.max(0, rawGained);
+
+                        if (!counterOk) {
+                            const curBal = await this.bot.browser.func.getCurrentPoints().catch(() => null);
+                            const prevBal = Number(this.bot.userData.currentPoints ?? startBalance);
+                            if (curBal !== null && curBal > prevBal) {
+                                gainedPoints = curBal - prevBal;
+                                this.bot.userData.currentPoints = curBal;
+                                newMissingPointsTotal = Math.max(0, missingPointsTotal - gainedPoints);
+                            } else {
+                                gainedPoints = 0;
+                                newMissingPointsTotal = missingPointsTotal;
+                            }
+                        }
+
                         if (gainedPoints === 0) {
                             stagnantLoop++;
                             this.bot.logger.info(isMobile, 'SEARCH-BING-EXTRA', `未获得积分 ${stagnantLoop}/${stagnantLoopMax} | queryLength=${query.length} | remaining=${newMissingPointsTotal}`);
@@ -237,7 +263,7 @@ class Search extends Workers_1.Workers {
                             this.bot.logger.info(isMobile, 'SEARCH-BING-EXTRA', '在额外搜索期间已获得所有必需的搜索积分');
                             break;
                         }
-                        if (stagnantLoop > stagnantLoopMax) {
+                        if (stagnantLoop >= stagnantLoopMax) {
                             this.bot.logger.warn(isMobile, 'SEARCH-BING-EXTRA', `搜索在 ${stagnantLoopMax} 次迭代中未获得积分，中止额外搜索`);
                             const finalBalance = Number(this.bot.userData.currentPoints ?? startBalance);
                             this.bot.logger.info(isMobile, 'SEARCH-BING', `优雅结束额外搜索 | startBalance=${startBalance} | finalBalance=${finalBalance} | totalGained=${totalGainedPoints}`);
