@@ -118,6 +118,10 @@ class SearchManager {
                 itemCount: 1,
                 source: 'mapped-from-desktop'
             };
+            missingSearchPoints.desktopPoints = 0;
+            if (missingSearchPoints.desktopCounter) {
+                missingSearchPoints.desktopCounter.remaining = 0;
+            }
             desktopRemaining = 0;
         }
         this.bot.logger.info('main', 'SEARCH-MANAGER', `开始 | 账户=${accountEmail} | 移动端缺失=${missingSearchPoints.mobilePoints} | 桌面端缺失=${desktopRemaining}`);

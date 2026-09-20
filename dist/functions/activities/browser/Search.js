@@ -341,50 +341,68 @@ class Search extends Workers_1.Workers {
         this.firstScroll = true;
         this.bot.logger.debug(isMobile, 'SEARCH-BING', `开始bingSearch | queryLength=${query.length} | maxAttempts=${maxAttempts} | searchCount=${this.searchCount} | refreshEvery=${refreshThreshold} | scrollRandomResults=${this.bot.config.searchSettings.scrollRandomResults} | clickRandomResults=${this.bot.config.searchSettings.clickRandomResults}`);
         let submitted = false;
-        for (let i = 0; i < maxAttempts && !submitted; i++) {
-            try {
-                const searchBar = '#sb_form_q';
-                const searchBox = searchPage.locator(searchBar);
-                await this.executeStage(searchPage, isMobile, controller, queryDeadline, 'search-box', timeoutBudget.stageTimeouts['search-box'], async (signal) => {
-                    signal.throwIfAborted();
-                    await searchPage.evaluate(() => {
-                        window.scrollTo({ left: 0, top: 0, behavior: 'auto' });
+        if (isMobile) {
+            // 移动端在搜索结果页通常折叠搜索框，直接通过 URL 导航执行搜索，速度极快且 100% 稳定
+            const cvid = (0, crypto_1.randomBytes)(16).toString('hex');
+            let baseBing = this.bingHome;
+            if (baseBing.includes('?')) baseBing = baseBing.split('?')[0];
+            const mobileSearchUrl = `${baseBing}/search?q=${encodeURIComponent(query)}&search=&form=QBLHCN&cvid=${cvid}`;
+            await this.executeStage(searchPage, isMobile, controller, queryDeadline, 'submit', timeoutBudget.navigationMs, async (signal) => {
+                signal.throwIfAborted();
+                await searchPage.goto(mobileSearchUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
+                signal.throwIfAborted();
+                await searchPage.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
+                signal.throwIfAborted();
+                await this.bot.browser.utils.tryDismissAllMessages(searchPage);
+            });
+            submitted = true;
+            this.bot.logger.debug(isMobile, 'SEARCH-BING', `移动端直接导航搜索成功 | queryLength=${query.length}`);
+        } else {
+            for (let i = 0; i < maxAttempts && !submitted; i++) {
+                try {
+                    const searchBar = '#sb_form_q';
+                    const searchBox = searchPage.locator(searchBar);
+                    await this.executeStage(searchPage, isMobile, controller, queryDeadline, 'search-box', timeoutBudget.stageTimeouts['search-box'], async (signal) => {
+                        signal.throwIfAborted();
+                        await searchPage.evaluate(() => {
+                            window.scrollTo({ left: 0, top: 0, behavior: 'auto' });
+                        });
+                        await searchPage.keyboard.press('Home');
+                        await searchBox.waitFor({ state: 'visible', timeout: 15000 });
                     });
-                    await searchPage.keyboard.press('Home');
-                    await searchBox.waitFor({ state: 'visible', timeout: 15000 });
-                });
-                await this.executeStage(searchPage, isMobile, controller, queryDeadline, 'submit', timeoutBudget.stageTimeouts.submit, async (signal) => {
-                    await (0, SearchExecution_1.abortableWait)(1000, signal);
-                    await searchPage.evaluate(() => {
-                        const form = document.querySelector('#sb_form');
-                        if (form && !form.querySelector('input[name="ensearch"]')) {
-                            const input = document.createElement('input');
-                            input.type = 'hidden';
-                            input.name = 'ensearch';
-                            input.value = '1';
-                            form.appendChild(input);
-                        }
-                    }).catch(() => {});
-                    await searchBox.click({ clickCount: 3, timeout: 5000 });
-                    signal.throwIfAborted();
-                    await searchBox.fill('');
-                    await searchPage.keyboard.type(query, { delay: 50 });
-                    signal.throwIfAborted();
-                    await searchPage.keyboard.press('Enter');
-                });
-                submitted = true;
-                this.bot.logger.debug(isMobile, 'SEARCH-BING', `提交查询到必应 | attempt=${i + 1}/${maxAttempts} | queryLength=${query.length}`);
-            }
-            catch (error) {
-                if (error instanceof SearchExecution_1.SearchOperationError && error.timedOut)
-                    throw error;
-                if (i >= maxAttempts - 1 || searchPage.isClosed()) {
-                    this.bot.logger.error(isMobile, 'SEARCH-BING', `提交前重试耗尽 | attempts=${maxAttempts} | queryLength=${query.length} | message=${error instanceof Error ? error.message : String(error)}`);
-                    throw error;
+                    await this.executeStage(searchPage, isMobile, controller, queryDeadline, 'submit', timeoutBudget.stageTimeouts.submit, async (signal) => {
+                        await (0, SearchExecution_1.abortableWait)(1000, signal);
+                        await searchPage.evaluate(() => {
+                            const form = document.querySelector('#sb_form');
+                            if (form && !form.querySelector('input[name="ensearch"]')) {
+                                const input = document.createElement('input');
+                                input.type = 'hidden';
+                                input.name = 'ensearch';
+                                input.value = '1';
+                                form.appendChild(input);
+                            }
+                        }).catch(() => {});
+                        await searchBox.click({ clickCount: 3, timeout: 5000 });
+                        signal.throwIfAborted();
+                        await searchBox.fill('');
+                        await searchPage.keyboard.type(query, { delay: 50 });
+                        signal.throwIfAborted();
+                        await searchPage.keyboard.press('Enter');
+                    });
+                    submitted = true;
+                    this.bot.logger.debug(isMobile, 'SEARCH-BING', `提交查询到必应 | attempt=${i + 1}/${maxAttempts} | queryLength=${query.length}`);
                 }
-                this.bot.logger.error(isMobile, 'SEARCH-BING', `提交前搜索尝试失败 | attempt=${i + 1}/${maxAttempts} | queryLength=${query.length} | message=${error instanceof Error ? error.message : String(error)}`);
-                this.bot.logger.warn(isMobile, 'SEARCH-BING', `重试搜索 | attempt=${i + 1}/${maxAttempts} | queryLength=${query.length}`);
-                await (0, SearchExecution_1.abortableWait)(timeoutBudget.retryDelayMs, controller.signal);
+                catch (error) {
+                    if (error instanceof SearchExecution_1.SearchOperationError && error.timedOut)
+                        throw error;
+                    if (i >= maxAttempts - 1 || searchPage.isClosed()) {
+                        this.bot.logger.error(isMobile, 'SEARCH-BING', `提交前重试耗尽 | attempts=${maxAttempts} | queryLength=${query.length} | message=${error instanceof Error ? error.message : String(error)}`);
+                        throw error;
+                    }
+                    this.bot.logger.error(isMobile, 'SEARCH-BING', `提交前搜索尝试失败 | attempt=${i + 1}/${maxAttempts} | queryLength=${query.length} | message=${error instanceof Error ? error.message : String(error)}`);
+                    this.bot.logger.warn(isMobile, 'SEARCH-BING', `重试搜索 | attempt=${i + 1}/${maxAttempts} | queryLength=${query.length}`);
+                    await (0, SearchExecution_1.abortableWait)(timeoutBudget.retryDelayMs, controller.signal);
+                }
             }
         }
         if (!submitted)
