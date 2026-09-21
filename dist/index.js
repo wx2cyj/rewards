@@ -1280,9 +1280,6 @@ class MicrosoftRewardsBot {
                 else {
                     otherGainedPoints = searchGainedPoints;
                 }
-                this.safeEnsurePointRunCategoryMinimum(accountEmail, '移动搜索', 'mobileSearch', mobileGainedPoints, finalPoints);
-                this.safeEnsurePointRunCategoryMinimum(accountEmail, 'PC搜索', 'pcSearch', desktopGainedPoints, finalPoints);
-                this.safeEnsurePointRunCategoryMinimum(accountEmail, '其他积分变化', 'other', otherGainedPoints, finalPoints);
                 const finalSearchPoints = await this.browser.func.getSearchPoints().catch(() => searchPoints);
                 const finalSearchCounters = this.browser.func.missingSearchPoints(finalSearchPoints, true);
                 const finalMobileSearch = finalSearchCounters.mobileCounter;
@@ -1294,11 +1291,33 @@ class MicrosoftRewardsBot {
                 const finalMobileCompleted = Math.max(finalMobileSearch.completed || initialMobileProgress, finalMobileTotal > 0 ? Math.min(finalMobileTotal, mobileGainedPoints) : mobileGainedPoints);
                 const finalPcCompleted = Math.max(finalSearchCounters.desktopCounter.completed + finalSearchCounters.edgeCounter.completed ||
                     initialDesktopCompleted, finalPcTotal > 0 ? Math.min(finalPcTotal, desktopGainedPoints) : desktopGainedPoints);
-                const finalMobileStatus = finalMobileUnrecognized
-                    ? '未识别到搜索额度'
-                    : finalMobileTotal > 0 && finalMobileCompleted < finalMobileTotal
-                        ? '进行中'
-                        : '已完成';
+
+                // 当移动端无独立计数器（finalMobileUnrecognized），而由移动端代跑 PC 搜索配额时，
+                // 搜索积分归属于 PC 搜索配额，避免移动端与 PC 端双重记账导致明细总和虚高
+                const isSearchMergedToMobile = finalMobileUnrecognized && mobileGainedPoints > 0 && desktopGainedPoints === 0;
+                const displayMobileGained = isSearchMergedToMobile ? 0 : mobileGainedPoints;
+                const displayMobileStatus = isSearchMergedToMobile
+                    ? '额度已合并至 PC 搜索'
+                    : finalMobileUnrecognized
+                        ? '未识别到搜索额度'
+                        : finalMobileTotal > 0 && finalMobileCompleted < finalMobileTotal
+                            ? '进行中'
+                            : '已完成';
+                const displayPcSearchGained = isSearchMergedToMobile
+                    ? Math.min(finalPcTotal > 0 ? finalPcTotal : searchGainedPoints, mobileGainedPoints)
+                    : (finalPcTotal > 0
+                        ? Math.min(finalPcTotal, Math.max(desktopGainedPoints, finalPcCompleted - (initialDesktopCompleted ?? 0)))
+                        : desktopGainedPoints);
+
+                if (isSearchMergedToMobile) {
+                    this.safeEnsurePointRunCategoryMinimum(accountEmail, 'PC搜索', 'pcSearch', displayPcSearchGained, finalPoints);
+                } else {
+                    this.safeEnsurePointRunCategoryMinimum(accountEmail, '移动搜索', 'mobileSearch', mobileGainedPoints, finalPoints);
+                    this.safeEnsurePointRunCategoryMinimum(accountEmail, 'PC搜索', 'pcSearch', desktopGainedPoints, finalPoints);
+                }
+                this.safeEnsurePointRunCategoryMinimum(accountEmail, '其他积分变化', 'other', otherGainedPoints, finalPoints);
+
+                const finalMobileStatus = displayMobileStatus;
                 const finalPcStatus = finalPcUnrecognized
                     ? '未识别到搜索额度'
                     : finalPcTotal > 0 && finalPcCompleted < finalPcTotal
@@ -1308,13 +1327,13 @@ class MicrosoftRewardsBot {
                     mobile: {
                         completed: finalMobileCompleted,
                         total: finalMobileTotal,
-                        gained: mobileGainedPoints,
+                        gained: displayMobileGained,
                         status: finalMobileStatus
                     },
                     desktop: {
                         completed: finalPcCompleted,
                         total: finalPcTotal,
-                        gained: desktopGainedPoints,
+                        gained: displayPcSearchGained,
                         status: finalPcStatus
                     },
                     daily: {
@@ -1333,18 +1352,15 @@ class MicrosoftRewardsBot {
                     label: '移动搜索',
                     completed: finalMobileCompleted,
                     total: finalMobileTotal,
-                    gained: mobileGainedPoints,
+                    gained: displayMobileGained,
                     status: finalMobileStatus
                 });
-                const actualPcSearchGained = finalPcTotal > 0
-                    ? Math.min(finalPcTotal, Math.max(desktopGainedPoints, finalPcCompleted - (initialDesktopCompleted ?? 0)))
-                    : desktopGainedPoints;
                 taskSummary.push({
                     key: 'desktop',
                     label: 'PC 搜索',
                     completed: finalPcCompleted,
                     total: finalPcTotal,
-                    gained: actualPcSearchGained,
+                    gained: displayPcSearchGained,
                     status: finalPcStatus
                 });
                 if (otherGainedPoints > 0) {
