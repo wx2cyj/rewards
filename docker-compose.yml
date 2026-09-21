@@ -8,8 +8,8 @@ services:
       TZ: "Asia/Shanghai"
       NODE_ENV: "production"
 
-      # 定时任务执行时间（默认每天早晨 7 点 0 分）
-      CRON_SCHEDULE: "0 7 * * *"
+      # 定时任务执行时间（默认每天早晨 9 点 0 分）
+      CRON_SCHEDULE: "0 9 * * *"
 
       # 容器启动时是否立即运行一次任务（true / false）
       RUN_ON_START: "true"
