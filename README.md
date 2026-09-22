@@ -24,13 +24,13 @@
 ```yaml
 services:
   rewards:
-    image: wangxun2cyj1314/rewards:latest  # 或 ghcr.io/wx2cyj/rewards:latest
+    image: ghcr.io/wx2cyj/rewards:latest
     container_name: rewards
     restart: unless-stopped
     environment:
       TZ: "Asia/Shanghai"
       NODE_ENV: "production"
-      CRON_SCHEDULE: "0 7 * * *"    # 每天早晨 7:00 执行
+      CRON_SCHEDULE: "0 9 * * *"    # 每天早晨 9:00 执行
       RUN_ON_START: "true"          # 容器启动时立即执行一次
       SKIP_RANDOM_SLEEP: "true"     # 是否跳过随机延迟
 
