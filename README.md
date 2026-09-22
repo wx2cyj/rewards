@@ -30,7 +30,7 @@ services:
     environment:
       TZ: "Asia/Shanghai"
       NODE_ENV: "production"
-      CRON_SCHEDULE: "0 9 * * *"    # 每天早晨 9:00 执行
+      CRON_SCHEDULE: "0 9,15 * * *"    # 每天早晨 9:00 与下午 15:00 执行各一次
       RUN_ON_START: "true"          # 容器启动时立即执行一次
       SKIP_RANDOM_SLEEP: "true"     # 是否跳过随机延迟
 
