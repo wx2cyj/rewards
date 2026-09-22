@@ -755,7 +755,7 @@ class Login {
         this.bot.logger.info(this.bot.isMobile, 'LOGIN', '登录完成，会话已保存');
     }
     async verifyBingSession(page, account) {
-        const url = 'https://www.bing.com/fd/auth/signin?action=interactive&provider=windows_live_id&return_url=https%3A%2F%2Fwww.bing.com%2F%3Fensearch%3D1';
+        const url = 'https://cn.bing.com/fd/auth/signin?action=interactive&provider=windows_live_id&return_url=https%3A%2F%2Fcn.bing.com%2F%3Fensearch%3D1';
         const loopMax = 15;
         this.bot.logger.info(this.bot.isMobile, 'LOGIN-BING', '验证Bing会话');
         try {
@@ -763,7 +763,7 @@ class Login {
                 { name: 'SRCHHPGUSR', value: 'SRCHLANGV2=&CW=1920&CH=1080&DPR=1&UTC=480&DM=0&ENSEARCH=1', domain: '.bing.com', path: '/' },
                 { name: 'SRCHHPGUSR', value: 'SRCHLANGV2=&CW=1920&CH=1080&DPR=1&UTC=480&DM=0&ENSEARCH=1', domain: 'cn.bing.com', path: '/' }
             ]).catch(() => {});
-            await page.goto(url, { waitUntil: 'networkidle', timeout: 10000 }).catch(() => { });
+            await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => { });
             for (let i = 0; i < loopMax; i++) {
                 if (page.isClosed())
                     break;
@@ -780,13 +780,20 @@ class Login {
                         return;
                     }
                     // Cookie-only 回退: 在首页但视觉元素未找到时，仅凭 cookie 验证
-                    if (i >= 3) {
+                    if (i >= 2) {
                         const fallbackCookies = await page.context().cookies(['https://www.bing.com/', 'https://cn.bing.com/']).catch(() => []);
                         if (hasBingAuthenticationCookies(fallbackCookies)) {
                             this.bot.logger.info(this.bot.isMobile, 'LOGIN-BING', 'Cookie回退验证通过（首页视觉元素未找到但cookie有效），Bing会话验证成功');
                             return;
                         }
                     }
+                }
+                // 处理网络错误页面 (chromewebdata)
+                if (u.hostname === 'chromewebdata') {
+                    this.bot.logger.warn(this.bot.isMobile, 'LOGIN-BING', `检测到网络错误页面 (${u.hostname})，正在尝试重新导航到必应国内版`);
+                    await page.goto('https://cn.bing.com/?ensearch=1', { waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => {});
+                    await this.bot.utils.wait(2000);
+                    continue;
                 }
                 // 处理服务协议/条款更新页面 (account.live.com/tou/accrue 等)
                 const isTouPage = (u.hostname === 'account.live.com' || u.hostname === 'login.live.com') && (
@@ -827,23 +834,23 @@ class Login {
                     const authCookies = await page.context().cookies(['https://www.bing.com/', 'https://cn.bing.com/']).catch(() => []);
                     if (hasBingAuthenticationCookies(authCookies)) {
                         this.bot.logger.info(this.bot.isMobile, 'LOGIN-BING', '认证中间页已有Bing cookie，直接导航到首页');
-                        await page.goto('https://www.bing.com/', { waitUntil: 'domcontentloaded', timeout: 10000 }).catch(() => {});
+                        await page.goto('https://cn.bing.com/?ensearch=1', { waitUntil: 'domcontentloaded', timeout: 10000 }).catch(() => {});
                         await this.bot.utils.wait(2000);
                         continue;
                     }
                     // 多次尝试后直接导航
-                    if (i >= 3) {
+                    if (i >= 2) {
                         this.bot.logger.info(this.bot.isMobile, 'LOGIN-BING', `第 ${i + 1} 次循环仍在认证中间页，直接导航到首页`);
-                        await page.goto('https://www.bing.com/', { waitUntil: 'domcontentloaded', timeout: 10000 }).catch(() => {});
+                        await page.goto('https://cn.bing.com/?ensearch=1', { waitUntil: 'domcontentloaded', timeout: 10000 }).catch(() => {});
                         await this.bot.utils.wait(3000);
                         continue;
                     }
                 }
                 // 非首页、非认证页时的 Cookie 回退
-                if (isBingDomain && !atBingHome && i >= 6) {
+                if (i >= 4) {
                     const domainCookies = await page.context().cookies(['https://www.bing.com/', 'https://cn.bing.com/']).catch(() => []);
                     if (hasBingAuthenticationCookies(domainCookies)) {
-                        this.bot.logger.info(this.bot.isMobile, 'LOGIN-BING', 'Cookie回退验证通过（非首页但cookie有效），Bing会话验证成功');
+                        this.bot.logger.info(this.bot.isMobile, 'LOGIN-BING', 'Cookie回退验证通过（已具有有效认证Cookie），Bing会话验证成功');
                         return;
                     }
                 }
