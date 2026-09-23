@@ -723,7 +723,19 @@ class MicrosoftRewardsBot {
                 this.cookies.mobile = await initialContext.cookies();
                 this.fingerprint = activeMobileSession.fingerprint;
                 const data = await this.browser.func.getDashboardData(account.geoLocale);
-                const initialPoints = data.userStatus.availablePoints;
+                const initialSearchCounters = this.browser.func.missingSearchPoints(data.userStatus.counters, true, data.dashboardFieldAvailability);
+                const initialMobileSearch = initialSearchCounters.mobileCounter;
+                const initialDesktopCompleted = initialSearchCounters.desktopCounter.completed + initialSearchCounters.edgeCounter.completed;
+                const initialDesktopTotal = initialSearchCounters.desktopCounter.total + initialSearchCounters.edgeCounter.total;
+                const initialMobileUnrecognized = ['missing-counter', 'empty-counter', 'invalid-counter'].includes(initialSearchCounters.mobileStatus);
+                const initialPcUnrecognized = ['missing-counter', 'empty-counter', 'invalid-counter'].includes(initialSearchCounters.desktopCounter.status);
+                const initialMobileProgress = initialMobileSearch.completed;
+
+                // 如果在读取 dashboard 时已存在少量初始搜索进度（例如 verifyBingSession 前置会话验证或访问必应国际版时，必应被动计入的单次搜索 3 积分），
+                // 此时账号余额已被必应计入了 3 分。为防止基准虚高导致通知总增加少算 3 分，以及搜索展示 57/60 (27/30)，
+                // 扣除此前置增量以还原任务启动前的真实初始基准积分。
+                const preLoginSearchOffset = (initialDesktopCompleted > 0 && initialDesktopCompleted <= 3) ? initialDesktopCompleted : 0;
+                const initialPoints = Math.max(0, data.userStatus.availablePoints - preLoginSearchOffset);
                 this.userData.initialPoints = initialPoints;
                 this.userData.currentPoints = initialPoints;
                 this.dashboardPointsKnown = true;
@@ -776,13 +788,6 @@ class MicrosoftRewardsBot {
                     runMode: currentRunOptions().accountMode,
                     pid: process.pid
                 });
-                const initialSearchCounters = this.browser.func.missingSearchPoints(data.userStatus.counters, true, data.dashboardFieldAvailability);
-                const initialMobileSearch = initialSearchCounters.mobileCounter;
-                const initialDesktopCompleted = initialSearchCounters.desktopCounter.completed + initialSearchCounters.edgeCounter.completed;
-                const initialDesktopTotal = initialSearchCounters.desktopCounter.total + initialSearchCounters.edgeCounter.total;
-                const initialMobileUnrecognized = ['missing-counter', 'empty-counter', 'invalid-counter'].includes(initialSearchCounters.mobileStatus);
-                const initialPcUnrecognized = ['missing-counter', 'empty-counter', 'invalid-counter'].includes(initialSearchCounters.desktopCounter.status);
-                const initialMobileProgress = initialMobileSearch.completed;
                 if (!isAccountStatusCheckOnly()) {
                     (0, TaskProgressStore_1.updateAccountTaskProgress)(accountEmail, {
                         mobile: {
@@ -1303,10 +1308,14 @@ class MicrosoftRewardsBot {
                         : finalMobileTotal > 0 && finalMobileCompleted < finalMobileTotal
                             ? '进行中'
                             : '已完成';
+                const actualSearchIncrease = Math.max(0, finalPcCompleted - Math.max(0, initialDesktopCompleted - preLoginSearchOffset));
+                const effectiveSearchGained = (finalPcTotal > 0 && finalPcCompleted >= finalPcTotal && initialDesktopCompleted <= 3)
+                    ? finalPcTotal
+                    : Math.max(desktopGainedPoints, mobileGainedPoints + preLoginSearchOffset, actualSearchIncrease);
                 const displayPcSearchGained = isSearchMergedToMobile
-                    ? Math.min(finalPcTotal > 0 ? finalPcTotal : searchGainedPoints, mobileGainedPoints)
+                    ? (finalPcTotal > 0 ? Math.min(finalPcTotal, effectiveSearchGained) : searchGainedPoints)
                     : (finalPcTotal > 0
-                        ? Math.min(finalPcTotal, Math.max(desktopGainedPoints, finalPcCompleted - (initialDesktopCompleted ?? 0)))
+                        ? Math.min(finalPcTotal, effectiveSearchGained)
                         : desktopGainedPoints);
 
                 if (isSearchMergedToMobile) {
@@ -1325,8 +1334,8 @@ class MicrosoftRewardsBot {
                         : '已完成';
                 (0, TaskProgressStore_1.updateAccountTaskProgress)(accountEmail, {
                     mobile: {
-                        completed: finalMobileCompleted,
-                        total: finalMobileTotal,
+                        completed: isSearchMergedToMobile ? 0 : finalMobileCompleted,
+                        total: isSearchMergedToMobile ? 0 : finalMobileTotal,
                         gained: displayMobileGained,
                         status: finalMobileStatus
                     },
@@ -1350,8 +1359,7 @@ class MicrosoftRewardsBot {
                 taskSummary.push({
                     key: 'mobile',
                     label: '移动搜索',
-                    completed: finalMobileCompleted,
-                    total: finalMobileTotal,
+                    ...(isSearchMergedToMobile ? {} : { completed: finalMobileCompleted, total: finalMobileTotal }),
                     gained: displayMobileGained,
                     status: finalMobileStatus
                 });
