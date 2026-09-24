@@ -2487,7 +2487,17 @@ function startInternalScheduler() {
             if (matchesCron(sched, now)) {
                 lastCronMinuteKey = minuteKey;
                 console.log(`[scheduler] 定时任务触发 (CRON: "${sched}", 时区: ${tz}, 当前时间: ${minuteKey})`);
-                if (!runState.running) {
+                const currentRun = mergedRunState();
+                if (currentRun.running && (currentRun.ageSeconds ?? 0) > 7200) {
+                    console.log(`[scheduler] 检测到前次任务已运行超过 2 小时 (${currentRun.ageSeconds}s)，判定为卡死，强制清理旧进程并启动`);
+                    if (currentRun.pid) {
+                        try { process.kill(currentRun.pid, 'SIGKILL'); } catch {}
+                    }
+                    try { fs_1.default.unlinkSync(runLockFile); } catch {}
+                    try { fs_1.default.unlinkSync(runLockMetaFile); } catch {}
+                    runState = { running: false, lastMessage: '前次任务超时被自动清理' };
+                }
+                if (!mergedRunState().running) {
                     startScriptRun('task', { accountMode: 'continue', source: 'cron' });
                 } else {
                     console.log('[scheduler] 已有任务正在运行中，本次定时触发跳过');

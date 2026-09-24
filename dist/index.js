@@ -392,7 +392,7 @@ class MicrosoftRewardsBot {
         if (totalAccounts === 0) {
             this.logger.info('main', 'RUN-END', `没有需要执行的账户 | 运行模式: ${selection.mode} | 已跳过: ${selection.skipped.length}`, 'green');
             await flushAllWebhooks();
-            return;
+            process.exit(0);
         }
         // 如果集群数大于1，则使用多进程模式
         if (this.config.clusters > 1 && !options.manualTask) {
@@ -1447,10 +1447,14 @@ async function main() {
     try {
         await rewardsBot.initialize();
         await rewardsBot.run();
+        await flushAllWebhooks();
+        process.exit(0);
     }
     catch (error) {
         rewardsBot.logger.error('main', 'MAIN-ERROR', error);
         markFormalRunInterrupted('主流程异常，任务中断，等待续跑');
+        await flushAllWebhooks();
+        process.exit(1);
     }
 }
 main().catch(async (error) => {
