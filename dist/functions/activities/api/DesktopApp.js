@@ -3,6 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.DesktopApp = void 0;
 const Workers_1 = require("../../Workers");
 
+const PC_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0';
+
 const DESKTOP_APP_HEADERS = {
     'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) MSRewards/Desktop/1.4.56',
     'X-MSRewards-App': '1',
@@ -14,14 +16,18 @@ class DesktopApp extends Workers_1.Workers {
         this.bot.logger.info(this.bot.isMobile, 'DESKTOP-APP', '开始扫描桌面客户端每周专属任务 (Desktop App Weekly Exclusive)...');
         try {
             const earnUrl = 'https://rewards.bing.com/earn';
-            const cookieHeader = this.bot.browser.func.buildCookieHeaderForUrl(this.bot.cookies.desktop, earnUrl);
+            // 优先采用当前会话已激活验证的真实 Cookie (解决 mobile/desktop 会话隔离导致的空凭据问题)
+            const activeCookies = (this.bot.cookies.mobile && this.bot.cookies.mobile.length > 0)
+                ? this.bot.cookies.mobile
+                : this.bot.cookies.desktop;
+            const cookieHeader = this.bot.browser.func.buildCookieHeaderForUrl(activeCookies, earnUrl);
 
-            // 1. 请求 earn 页面检测是否有专属打孔卡任务链接
+            // 1. 请求 earn 页面检测是否有专属打孔卡任务链接（必须使用 PC User-Agent 才能触发下发 PC 专属任务）
             const earnResponse = await this.bot.axios.request({
                 url: earnUrl,
                 method: 'GET',
                 headers: {
-                    ...(this.bot.fingerprint?.headers ?? {}),
+                    'user-agent': PC_USER_AGENT,
                     Cookie: cookieHeader,
                     Referer: 'https://rewards.bing.com/'
                 }
@@ -46,7 +52,6 @@ class DesktopApp extends Workers_1.Workers {
                 url: questUrl,
                 method: 'GET',
                 headers: {
-                    ...(this.bot.fingerprint?.headers ?? {}),
                     ...DESKTOP_APP_HEADERS,
                     Cookie: cookieHeader,
                     Referer: earnUrl
@@ -140,7 +145,6 @@ class DesktopApp extends Workers_1.Workers {
                 url: earnUrl,
                 method: 'POST',
                 headers: {
-                    ...(this.bot.fingerprint?.headers ?? {}),
                     ...DESKTOP_APP_HEADERS,
                     'content-type': 'text/plain;charset=UTF-8',
                     'next-action': actionHash,
@@ -164,9 +168,8 @@ class DesktopApp extends Workers_1.Workers {
                 url: reportUrl,
                 method: 'POST',
                 headers: {
-                    ...(this.bot.fingerprint?.headers ?? {}),
                     ...DESKTOP_APP_HEADERS,
-                    Cookie: this.bot.browser.func.buildCookieHeaderForUrl(this.bot.cookies.desktop, reportUrl),
+                    Cookie: cookieHeader,
                     Origin: 'https://cn.bing.com',
                     Referer: 'https://cn.bing.com/'
                 },
