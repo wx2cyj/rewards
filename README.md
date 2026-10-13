@@ -14,6 +14,13 @@
    - 兼容微软新版 Rewards 仪表板（Server Actions 部署与无 RequestVerificationToken 的新架构）。
 4. **轻量化 Docker 镜像**：
    - 预编译运行时，镜像体积更小，基于 `node:24-slim` 与 Patchright 专用 Chromium Headless Shell，支持 `linux/amd64` 与 `linux/arm64` 双架构。
+5. **桌面应用每周专属任务（独家支持，每周稳拿 +70 积分）**：
+   - 自动识别并伪装微软官方桌面客户端（MSRewards Desktop App）特征头，解锁并全自动打卡每周专享打孔卡（`WW_pcparent_RewardsApp_weekly_Exclusive`），每周稳拿 70 分。
+6. **现代化 Fluent 深浅毛玻璃 Web 控制台**：
+   - 全新深邃科技感毛玻璃设计（Glassmorphism），支持暗黑、浅色与跟随系统一键无感切换；
+   - 升级五核 Hero 指标看板（今日已增积分、当前总积分、任务达成率、托管账号数、调度状态）与 7 日 / 30 日积分增长动态趋势柱状图。
+7. **直连百度官方免 Key 实时热榜保底**：
+   - 本地新增直连百度官方移动端实时热搜榜，彻底解决第三方聚合平台 403 限流导致回退到本地英文词库的痛点。
 
 ---
 

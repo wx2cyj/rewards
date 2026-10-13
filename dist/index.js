@@ -1145,6 +1145,9 @@ class MicrosoftRewardsBot {
                         await runPointTask('打卡活动', async () => this.workers.doPunchCards(data, this.mainMobilePage));
                     }
                 }
+                if (this.config.workers.doDesktopApp ?? true) {
+                    await runPointTask('桌面专享任务', async () => this.workers.doDesktopAppPromotions());
+                }
                 const searchPoints = await this.browser.func.getSearchPoints();
                 let missingSearchPoints = this.browser.func.missingSearchPoints(searchPoints, true);
                 const unrecognizedCounter = (status) => ['missing-counter', 'empty-counter', 'invalid-counter'].includes(status);

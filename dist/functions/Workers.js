@@ -214,6 +214,9 @@ class Workers {
             }
         }
     }
+    async doDesktopAppPromotions() {
+        await this.bot.activities.doDesktopApp();
+    }
 }
 exports.Workers = Workers;
 //# sourceMappingURL=Workers.js.map

@@ -9,7 +9,8 @@ exports.extractServerActionHashResultFromSources = extractServerActionHashResult
 exports.KNOWN_SERVER_ACTION_DEPLOYMENT_IDS = new Set(['20260612-3', '20260626-1', '20260701-3']);
 exports.FALLBACK_SERVER_ACTION_HASHES = {
     toggleStreakProtection: '40eddd39784c87de1e9c077e72117f3ed9a016a2d2',
-    claimBonusPoints: '00cf5ba7699f0e920ffcff223f9e48fea78fd49784'
+    claimBonusPoints: '00cf5ba7699f0e920ffcff223f9e48fea78fd49784',
+    reportActivity: '707e6eb15bdfdd5fba193f0a77e934f7018faf87ce'
 };
 function isKnownServerActionDeployment(deploymentId) {
     return Boolean(deploymentId && exports.KNOWN_SERVER_ACTION_DEPLOYMENT_IDS.has(deploymentId));
@@ -40,11 +41,18 @@ const ACTION_KEYWORDS = {
         '领取积分',
         '奖励积分',
         '奖励'
+    ],
+    reportActivity: [
+        'reportActivity',
+        'reportactivity',
+        'claimCard',
+        'report Activity'
     ]
 };
 const DIRECT_ACTION_NAMES = {
     toggleStreakProtection: ['toggleStreakProtection'],
-    claimBonusPoints: ['claimBonusPoints', 'claimAllPoints']
+    claimBonusPoints: ['claimBonusPoints', 'claimAllPoints'],
+    reportActivity: ['reportActivity']
 };
 const HASH_PATTERN = /[a-f0-9]{40,64}/gi;
 function extractDeploymentIdFromHtml(html) {

@@ -1753,7 +1753,16 @@ function appHtml() {
   <main class="main">
     <header class="topbar">
       <div><h1 id="pageTitle">仪表盘</h1><p id="pageSubtitle">查看运行概况，维护账号、任务与系统参数。</p></div>
-      <div class="top-actions"><span id="userBadge" class="user-badge">admin</span><span class="env-pill">Local</span><button id="logoutBtn" class="icon-btn" title="退出登录">↗</button></div>
+      <div class="top-actions">
+        <div class="theme-toggle-wrap" id="themeToggleWrap">
+          <button class="theme-btn active" data-theme-val="auto" onclick="setTheme('auto')" title="跟随系统">💻</button>
+          <button class="theme-btn" data-theme-val="dark" onclick="setTheme('dark')" title="深色模式">🌙</button>
+          <button class="theme-btn" data-theme-val="light" onclick="setTheme('light')" title="浅色模式">☀️</button>
+        </div>
+        <span id="userBadge" class="user-badge">admin</span>
+        <span class="env-pill">Local</span>
+        <button id="logoutBtn" class="icon-btn" title="退出登录">↗</button>
+      </div>
     </header>
     <section id="dashboard" class="view active"></section>
     <section id="accounts" class="view"></section>
@@ -1771,10 +1780,457 @@ function appHtml() {
 }
 function baseCss() {
     return `
-:root{--bg:#eaf6f3;--bg-strong:#d9f0ec;--surface:#fff;--surface-soft:#f7fbfa;--line:#d7e5e1;--teal:#0f8f85;--teal-dark:#08746d;--teal-soft:#ddf3ef;--text:#17211f;--sub:#64736f;--muted:#91a19d;--danger:#b54646;--amber:#a96516;--blue:#2f6fed;--shadow:0 18px 42px rgba(15,63,58,.13)}
-*{box-sizing:border-box}body{margin:0;font-family:Inter,Segoe UI,Arial,"Microsoft YaHei",sans-serif;color:var(--text);background:var(--bg)}button,input,select,textarea{font:inherit}button{cursor:pointer}button:disabled{cursor:not-allowed;opacity:.65}
-.login-body{min-height:100vh;overflow:hidden;background:var(--bg)}.login-shell{min-height:100vh;position:relative;display:grid;place-items:center;padding:28px}.signin-shell{border-top:10px solid var(--teal)}.auth-shape{position:absolute;background:var(--bg-strong);border-radius:48px;pointer-events:none}.auth-shape-a{width:520px;height:520px;right:8vw;top:12vh}.auth-shape-b{width:420px;height:300px;left:-160px;bottom:-80px}.setup-shell .auth-shape-a{right:18vw;top:-110px}.setup-shell .auth-shape-b{left:-150px;bottom:-100px}.login-panel{position:relative;width:min(576px,calc(100vw - 36px));background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:48px 54px 40px;box-shadow:var(--shadow)}.signin-shell .login-panel{width:min(520px,calc(100vw - 36px));padding:46px 48px 36px}.brand-lock{display:flex;align-items:center;gap:14px;margin-bottom:28px}.brand-lock strong{display:block;font-size:15px;font-weight:800;line-height:1.2}.brand-lock span{display:block;margin-top:4px;color:var(--muted);font:12px/1.2 "Geist Mono",Consolas,monospace}.brand-mark{width:44px;height:44px;border-radius:8px;background:var(--teal);display:grid;place-items:center;color:#fff;font:800 14px/1 "Geist Mono",Consolas,monospace}.login-panel h1{margin:0;font-size:36px;line-height:1.15;font-weight:800;letter-spacing:0}.auth-hint{margin:12px 0 34px;color:var(--sub);font-size:15px;line-height:1.55}.login-form{display:grid;gap:18px}.auth-field{display:grid;gap:10px;font-size:13px;font-weight:700;color:var(--sub)}.auth-field input{height:54px;width:100%;border:1px solid var(--line);border-radius:8px;background:var(--surface-soft);padding:0 18px;color:var(--text);outline:none}.auth-field input:focus,.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(15,143,133,.1)}.primary-btn{height:44px;border:0;border-radius:8px;background:var(--teal);color:#fff;font-weight:800;padding:0 18px;display:inline-flex;align-items:center;justify-content:center;gap:8px}.wide-btn{height:54px;width:100%;margin-top:2px}.form-message{min-height:18px;margin:0;color:var(--danger);font-size:13px}.security-note{margin-top:16px;padding:14px 16px 14px 44px;position:relative;background:var(--surface-soft);border:1px solid var(--line);border-radius:8px;color:var(--sub);font-size:13px;line-height:1.4}.security-note:before{content:"✓";position:absolute;left:16px;top:14px;width:18px;height:18px;border-radius:50%;display:grid;place-items:center;background:var(--teal-soft);color:var(--teal);font-size:12px;font-weight:800}
-.app{display:grid;grid-template-columns:272px minmax(0,1fr);min-height:100vh;background:var(--bg)}.sidebar{background:var(--surface);border-right:1px solid var(--line);padding:28px 22px;display:flex;flex-direction:column;gap:24px}.logo-row{display:flex;align-items:center;gap:12px;min-width:0}.logo-row strong{display:block;font-size:14px;font-weight:800;line-height:1.2}.logo-row span{display:block;margin-top:4px;color:var(--muted);font:12px/1.2 "Geist Mono",Consolas,monospace}.sidebar nav{display:grid;gap:12px}.nav-item{height:44px;border:0;border-radius:8px;background:transparent;display:flex;align-items:center;gap:12px;padding:0 14px;color:var(--sub);font-size:14px;font-weight:700;text-align:left}.nav-item.active{background:var(--teal-soft);color:var(--teal-dark);font-weight:800}.nav-icon{width:18px;height:18px;display:grid;place-items:center;color:inherit}.sidebar-note{margin-top:auto;border:1px solid var(--line);background:var(--surface-soft);border-radius:8px;padding:16px}.sidebar-note strong{font-size:13px}.sidebar-note p{margin:8px 0 0;color:var(--sub);font-size:12px;line-height:1.45}.main{min-width:0}.topbar{height:118px;display:flex;align-items:center;justify-content:space-between;padding:34px 46px 22px}.topbar h1{font-size:32px;line-height:1.1;margin:0 0 10px;font-weight:800}.topbar p{margin:0;color:var(--sub);font-size:14px}.top-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.user-badge,.env-pill{height:36px;display:inline-flex;align-items:center;border-radius:8px;border:1px solid var(--line);background:var(--surface);padding:0 12px;color:var(--text);font-size:13px;font-weight:800}.env-pill{color:var(--sub);font:12px/1 "Geist Mono",Consolas,monospace}.icon-btn,.ghost-btn,.small-btn,.danger-btn{height:36px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--sub);padding:0 12px}.icon-btn{width:36px;padding:0}.danger-btn{color:var(--danger)}.view{display:none}.view.active{display:block}.content-grid{padding:0 46px 46px;display:grid;gap:24px}.metrics{display:grid;grid-template-columns:repeat(4,minmax(180px,1fr));gap:16px}.card{background:var(--surface);border:1px solid var(--line);border-radius:8px}.metric{min-height:132px;padding:22px;display:grid;grid-template-columns:44px 1fr;gap:16px;align-items:start}.metric-icon{width:42px;height:42px;border-radius:8px;background:var(--teal-soft);display:grid;place-items:center;color:var(--teal);font-weight:900}.metric small{display:block;color:var(--sub);font-size:13px}.metric strong{display:block;margin:8px 0 10px;font:800 28px/1 "Geist Mono",Consolas,monospace;color:var(--text)}.split-grid{display:grid;grid-template-columns:minmax(0,1fr) 474px;gap:24px}.bottom-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(360px,1fr);gap:24px}.section{padding:22px 26px}.section h2{font-size:20px;margin:0;color:var(--text)}.section-note{margin:8px 0 18px;color:var(--sub);font-size:13px;line-height:1.45}.toolbar{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:18px}.table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:820px}.table th,.table td{border-bottom:1px solid var(--line);padding:14px 12px;text-align:left;font-size:13px;white-space:nowrap}.table th{background:var(--surface-soft);color:var(--sub);font-weight:800}.progress-account .table td:last-child,.progress-account .table th:last-child,.points-table td,.runs-panel td{white-space:normal;overflow-wrap:anywhere;word-break:break-word}.pill,.status-pill{display:inline-flex;align-items:center;border-radius:999px;padding:4px 10px;background:var(--teal-soft);color:var(--teal-dark);font-weight:800;font-size:12px}.status-pill.state-unknown,.status-pill.state-pending,.status-pill.state-skipped,.status-pill.state-notrun{background:#eef3f1;color:var(--sub)}.status-pill.state-checking,.status-pill.state-running,.status-pill.state-interrupted,.status-pill.state-partial{background:#e8f0ff;color:var(--blue)}.status-pill.state-valid,.status-pill.state-success,.status-pill.state-completed{background:var(--teal-soft);color:var(--teal-dark)}.status-pill.state-error,.status-pill.state-failed{background:#ffeceb;color:var(--danger)}.account-status{display:grid;gap:5px}.account-status small{color:var(--sub);font-size:12px;max-width:260px;overflow:hidden;text-overflow:ellipsis}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.field{display:grid;gap:7px}.field label{font-size:12px;color:var(--sub);font-weight:800}.field input,.field select,.field textarea{border:1px solid var(--line);border-radius:8px;padding:0 10px;background:#fff;color:var(--text);outline:none}.field input,.field select{height:40px}.field textarea{min-height:96px;padding:10px;line-height:1.45;resize:vertical}.field.full{grid-column:1/-1}.switch-row{display:grid;gap:10px}.toggle{min-height:54px;display:flex;justify-content:space-between;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--line);border-radius:8px;background:#fff;font-weight:700}.toggle input{width:44px;height:24px;accent-color:var(--teal)}.log-box{white-space:pre-wrap;background:var(--surface-soft);color:var(--text);padding:18px;border-radius:8px;height:320px;overflow-x:hidden;overflow-y:auto;overflow-wrap:anywhere;word-break:break-word;max-width:100%;line-height:1.65;border:1px solid var(--line);font-family:"Geist Mono",Consolas,monospace;font-size:13px}.log-box.large{height:560px}.task-timeline{display:grid;gap:10px;margin-top:16px;max-height:360px;overflow:auto}.task-event{display:grid;grid-template-columns:132px minmax(150px,1fr) 112px 84px minmax(220px,2fr);gap:12px;align-items:start;border:1px solid var(--line);background:var(--surface-soft);border-radius:8px;padding:12px;font-size:13px}.task-event strong{display:block;color:var(--text);font-weight:800}.task-event small{display:block;margin-top:4px;color:var(--sub);line-height:1.4;overflow-wrap:anywhere}.task-event .event-points{color:var(--teal-dark);font-weight:900}.log-line{display:block;padding:2px 0}.log-line.error{color:var(--danger)}.log-line.warn{color:var(--amber)}.log-line.debug{color:var(--sub)}.filter-grid{display:grid;grid-template-columns:150px 130px 120px minmax(180px,1fr);gap:12px;align-items:end}.points-filter-grid{display:grid;grid-template-columns:minmax(170px,1.2fr) 140px 150px 150px auto;gap:12px;align-items:end}.progress-list{display:grid;gap:14px}.progress-account{border:1px solid var(--line);border-radius:8px;background:var(--surface-soft);padding:16px}.progress-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}.progress-heading h3{margin:0;font-size:15px}.progress-heading span{color:var(--teal-dark);font-weight:800;font-size:13px;text-align:right}.progress-items{display:grid;gap:10px}.progress-row{display:grid;grid-template-columns:110px minmax(90px,1fr) 130px 100px;gap:12px;align-items:center;font-size:13px}.progress-row strong{font-size:13px}.progress-bar{height:8px;border-radius:99px;background:#e2eeeb;overflow:hidden}.progress-fill{height:100%;background:var(--teal);border-radius:99px}.progress-points{color:var(--teal-dark);font-weight:800}.progress-status{color:var(--sub);font-size:12px;line-height:1.45}.calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(92px,1fr));gap:10px}.calendar-cell{min-height:82px;border:1px solid var(--line);border-radius:8px;background:#f7fbfa;padding:10px;display:grid;align-content:space-between;gap:8px}.calendar-cell.is-empty{opacity:.45}.calendar-cell strong{font:800 13px/1 "Geist Mono",Consolas,monospace}.calendar-cell span{font-size:12px;color:var(--sub);line-height:1.35}.calendar-cell b{font:800 18px/1 "Geist Mono",Consolas,monospace;color:var(--teal-dark)}.points-table .category-list{display:flex;flex-wrap:wrap;gap:6px;min-width:240px}.category-chip{display:inline-flex;border-radius:999px;background:var(--surface-soft);border:1px solid var(--line);padding:3px 8px;color:var(--sub);font-size:12px}.runs-panel{background:var(--surface-soft)}.runs-panel table{min-width:760px}.settings-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.setting-item{border:1px solid var(--line);border-radius:8px;background:var(--surface-soft);padding:16px}.setting-item span{display:block;color:var(--sub);font-size:12px;font-weight:800}.setting-item strong{display:block;margin-top:8px;color:var(--teal-dark);font:800 13px/1.3 "Geist Mono",Consolas,monospace;word-break:break-word}.modal{position:fixed;inset:0;background:rgba(10,31,28,.46);display:grid;place-items:center;padding:24px;z-index:20}.modal.hidden{display:none}.modal-card{width:min(760px,100%);max-height:calc(100vh - 48px);overflow:auto;background:#fff;border-radius:8px;padding:24px;box-shadow:0 24px 70px rgba(5,34,30,.22)}.modal-card h2{margin:0 0 18px}.modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}.empty-state{padding:30px;text-align:center;color:var(--sub);background:var(--surface-soft);border:1px dashed var(--line);border-radius:8px}@media(max-width:1180px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.split-grid,.bottom-grid{grid-template-columns:1fr}.points-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.calendar-grid{grid-template-columns:repeat(4,minmax(92px,1fr))}.task-event{grid-template-columns:1fr 1fr 90px 80px}}@media(max-width:820px){.app{grid-template-columns:1fr}.sidebar{position:static;padding:18px}.sidebar nav{grid-template-columns:repeat(2,minmax(0,1fr))}.sidebar-note{display:none}.topbar{height:auto;padding:22px;align-items:flex-start;gap:16px;flex-direction:column}.content-grid{padding:0 18px 28px}.metrics,.form-grid,.settings-list,.filter-grid,.points-filter-grid,.task-event{grid-template-columns:1fr}.field.full{grid-column:auto}.progress-row{grid-template-columns:1fr}.progress-heading{display:grid}.progress-heading span{text-align:left}.calendar-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.login-panel,.signin-shell .login-panel{padding:32px 24px}.auth-shape{display:none}}`;
+:root, [data-theme="dark"] {
+  --bg-base: #090d16;
+  --bg-gradient: radial-gradient(circle at top right, #1e1b4b 0%, #0f172a 45%, #090d16 100%);
+  --bg: #090d16;
+  --bg-strong: #0f172a;
+  --surface: rgba(22, 30, 49, 0.78);
+  --surface-soft: rgba(30, 41, 59, 0.65);
+  --surface-card: rgba(30, 41, 59, 0.75);
+  --surface-hover: rgba(30, 41, 59, 0.95);
+  --line: rgba(255, 255, 255, 0.1);
+  --line-light: rgba(255, 255, 255, 0.18);
+  --primary: #0078D4;
+  --primary-hover: #0284C7;
+  --accent: #38BDF8;
+  --teal: #0EA5E9;
+  --teal-dark: #38BDF8;
+  --teal-soft: rgba(14, 165, 233, 0.16);
+  --success: #10B981;
+  --warning: #F59E0B;
+  --amber: #F59E0B;
+  --danger: #EF4444;
+  --blue: #3B82F6;
+  --text: #F8FAFC;
+  --sub: #94A3B8;
+  --muted: #64748B;
+  --card-inner: rgba(255, 255, 255, 0.04);
+  --shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
+  --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.3);
+  --terminal-bg: rgba(5, 8, 15, 0.95);
+  --modal-bg: #131c2e;
+}
+[data-theme="light"] {
+  --bg-base: #F8FAFC;
+  --bg-gradient: radial-gradient(circle at top right, #E0E7FF 0%, #F1F5F9 50%, #E2E8F0 100%);
+  --bg: #F8FAFC;
+  --bg-strong: #E2E8F0;
+  --surface: rgba(255, 255, 255, 0.92);
+  --surface-soft: rgba(241, 245, 249, 0.88);
+  --surface-card: rgba(255, 255, 255, 0.9);
+  --surface-hover: rgba(255, 255, 255, 0.98);
+  --line: rgba(0, 0, 0, 0.08);
+  --line-light: rgba(0, 0, 0, 0.15);
+  --primary: #0078D4;
+  --primary-hover: #0284C7;
+  --accent: #0284C7;
+  --teal: #0284C7;
+  --teal-dark: #0369A1;
+  --teal-soft: rgba(2, 132, 199, 0.12);
+  --success: #059669;
+  --warning: #D97706;
+  --amber: #D97706;
+  --danger: #DC2626;
+  --blue: #2563EB;
+  --text: #0F172A;
+  --sub: #475569;
+  --muted: #64748B;
+  --card-inner: rgba(241, 245, 249, 0.85);
+  --shadow: 0 16px 36px rgba(0, 0, 0, 0.08);
+  --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.06);
+  --terminal-bg: #0F172A;
+  --modal-bg: #FFFFFF;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+  color: var(--text);
+  background: var(--bg-gradient);
+  background-color: var(--bg-base);
+  min-height: 100vh;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+button, input, select, textarea { font: inherit; }
+button { cursor: pointer; }
+button:disabled { cursor: not-allowed; opacity: .65; }
+
+/* Login Shell */
+.login-body { min-height: 100vh; overflow: hidden; background: var(--bg-gradient); }
+.login-shell { min-height: 100vh; position: relative; display: grid; place-items: center; padding: 28px; }
+.login-panel {
+  position: relative;
+  width: min(540px, calc(100vw - 36px));
+  background: var(--surface-card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 44px 48px;
+  box-shadow: var(--shadow);
+}
+.brand-lock { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
+.brand-lock strong { font-size: 16px; font-weight: 800; }
+.brand-lock span { display: block; margin-top: 4px; color: var(--muted); font: 12px/1.2 monospace; }
+.brand-mark {
+  width: 46px; height: 46px; border-radius: 14px;
+  background: linear-gradient(135deg, #0284C7, #0369A1);
+  display: grid; place-items: center; color: #fff;
+  font: 800 16px/1 monospace;
+  box-shadow: 0 4px 16px rgba(2, 132, 199, 0.45);
+}
+.login-panel h1 { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
+.auth-hint { margin: 10px 0 28px; color: var(--sub); font-size: 14px; line-height: 1.5; }
+.login-form { display: grid; gap: 18px; }
+.auth-field { display: grid; gap: 8px; font-size: 13px; font-weight: 700; color: var(--sub); }
+.auth-field input {
+  height: 48px; width: 100%; border: 1px solid var(--line); border-radius: 12px;
+  background: var(--card-inner); padding: 0 16px; color: var(--text); outline: none;
+  transition: all 0.2s ease;
+}
+.auth-field input:focus, .field input:focus, .field select:focus, .field textarea:focus {
+  border-color: var(--accent); box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+}
+.primary-btn {
+  height: 44px; border: 0; border-radius: 12px;
+  background: linear-gradient(135deg, #0078D4, #0284C7);
+  color: #fff; font-weight: 800; padding: 0 20px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  box-shadow: 0 4px 14px rgba(0, 120, 212, 0.35);
+  transition: all 0.2s ease;
+}
+.primary-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0, 120, 212, 0.45); }
+.wide-btn { height: 48px; width: 100%; margin-top: 4px; }
+.form-message { min-height: 18px; margin: 0; color: var(--danger); font-size: 13px; }
+.security-note {
+  margin-top: 18px; padding: 12px 16px; border-radius: 12px;
+  background: var(--card-inner); border: 1px solid var(--line);
+  color: var(--sub); font-size: 13px; line-height: 1.45;
+}
+
+/* App Main Layout */
+.app {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  min-height: 100vh;
+}
+.sidebar {
+  background: var(--surface);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-right: 1px solid var(--line);
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.logo-row { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 0 6px 8px; }
+.logo-row strong { font-size: 15px; font-weight: 800; }
+.logo-row span { font-size: 12px; color: var(--muted); display: block; margin-top: 2px; }
+.sidebar nav { display: grid; gap: 8px; }
+.nav-item {
+  height: 44px; border: 0; border-radius: 12px; background: transparent;
+  display: flex; align-items: center; gap: 12px; padding: 0 14px;
+  color: var(--sub); font-size: 14px; font-weight: 700; text-align: left;
+  transition: all 0.2s ease;
+}
+.nav-item:hover { background: var(--card-inner); color: var(--text); }
+.nav-item.active {
+  background: var(--teal-soft); color: var(--teal-dark);
+  font-weight: 800; border: 1px solid rgba(56, 189, 248, 0.3);
+}
+.nav-icon { width: 18px; height: 18px; display: grid; place-items: center; }
+.sidebar-note {
+  margin-top: auto; border: 1px solid var(--line); background: var(--card-inner);
+  border-radius: 14px; padding: 16px;
+}
+.sidebar-note strong { font-size: 13px; color: var(--text); }
+.sidebar-note p { margin: 6px 0 0; color: var(--sub); font-size: 12px; line-height: 1.45; }
+
+/* Main Area & Topbar */
+.main { min-width: 0; display: flex; flex-direction: column; }
+.topbar {
+  padding: 28px 36px 18px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap;
+}
+.topbar h1 { font-size: 26px; font-weight: 800; margin: 0 0 6px; letter-spacing: -0.3px; }
+.topbar p { margin: 0; color: var(--sub); font-size: 14px; }
+.top-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+/* Theme Toggle Capsule */
+.theme-toggle-wrap {
+  display: flex; align-items: center; gap: 2px;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 999px; padding: 3px;
+}
+.theme-btn {
+  border: 0; background: transparent; color: var(--sub);
+  width: 32px; height: 32px; border-radius: 999px;
+  display: grid; place-items: center; font-size: 15px;
+  transition: all 0.2s ease;
+}
+.theme-btn.active { background: var(--teal-soft); color: var(--teal-dark); font-weight: 800; }
+.theme-btn:hover:not(.active) { color: var(--text); }
+
+.user-badge, .env-pill {
+  height: 36px; display: inline-flex; align-items: center;
+  border-radius: 10px; border: 1px solid var(--line);
+  background: var(--surface); padding: 0 12px;
+  color: var(--text); font-size: 13px; font-weight: 800;
+}
+.icon-btn, .ghost-btn, .small-btn, .danger-btn {
+  height: 38px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--surface); color: var(--text); padding: 0 14px;
+  display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700;
+  transition: all 0.2s ease;
+}
+.icon-btn { width: 38px; padding: 0; justify-content: center; }
+.ghost-btn:hover, .icon-btn:hover { background: var(--surface-hover); border-color: var(--line-light); }
+.danger-btn { color: var(--danger); border-color: rgba(239, 68, 68, 0.3); }
+
+/* Views & Cards */
+.view { display: none; }
+.view.active { display: block; }
+.content-grid { padding: 0 36px 40px; display: grid; gap: 24px; }
+
+/* Hero Metrics 5-Card Grid */
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+.card, .section {
+  background: var(--surface-card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: var(--shadow-card);
+}
+.metric {
+  background: var(--surface-card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 20px 22px;
+  display: grid;
+  grid-template-columns: 46px 1fr;
+  gap: 16px;
+  align-items: center;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+.metric:hover { transform: translateY(-2px); border-color: var(--line-light); }
+.metric-icon {
+  width: 46px; height: 46px; border-radius: 14px;
+  background: var(--teal-soft); display: grid; place-items: center;
+  color: var(--teal-dark); font-size: 20px; font-weight: 900;
+}
+.metric small { display: block; color: var(--sub); font-size: 13px; font-weight: 600; }
+.metric strong {
+  display: block; margin: 4px 0 2px;
+  font-size: 28px; font-weight: 800; letter-spacing: -0.5px;
+  color: var(--text);
+}
+.metric .metric-hint { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.metric.hero-earned strong { color: #10B981; }
+.metric.hero-accent strong { color: #38BDF8; }
+.metric.hero-gold strong { color: #F59E0B; }
+
+/* Layout Grids */
+.split-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(360px, 1fr); gap: 24px; }
+.bottom-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; }
+.section { padding: 24px 28px; }
+.section h2 { font-size: 18px; font-weight: 800; margin: 0; color: var(--text); }
+.section-note { margin: 6px 0 18px; color: var(--sub); font-size: 13px; line-height: 1.45; }
+.toolbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 18px; }
+
+/* Tables */
+.table-wrap { overflow: auto; border-radius: 12px; border: 1px solid var(--line); }
+.table { width: 100%; border-collapse: collapse; min-width: 720px; }
+.table th, .table td { border-bottom: 1px solid var(--line); padding: 14px 16px; text-align: left; font-size: 13px; }
+.table th { background: var(--card-inner); color: var(--sub); font-weight: 800; font-size: 12px; }
+.table tr:last-child td { border-bottom: 0; }
+.table tr:hover td { background: var(--card-inner); }
+
+/* Badges & Pills */
+.pill, .status-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  border-radius: 999px; padding: 4px 12px;
+  background: var(--teal-soft); color: var(--teal-dark);
+  font-weight: 800; font-size: 12px;
+}
+.status-pill.state-unknown, .status-pill.state-pending, .status-pill.state-skipped, .status-pill.state-notrun {
+  background: rgba(148, 163, 184, 0.15); color: var(--sub);
+}
+.status-pill.state-checking, .status-pill.state-running, .status-pill.state-interrupted, .status-pill.state-partial {
+  background: rgba(56, 189, 248, 0.18); color: var(--accent);
+}
+.status-pill.state-valid, .status-pill.state-success, .status-pill.state-completed {
+  background: rgba(16, 185, 129, 0.18); color: var(--success);
+}
+.status-pill.state-error, .status-pill.state-failed {
+  background: rgba(239, 68, 68, 0.18); color: var(--danger);
+}
+
+/* Forms & Fields */
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.field { display: grid; gap: 8px; }
+.field label { font-size: 12px; color: var(--sub); font-weight: 700; }
+.field input, .field select, .field textarea {
+  border: 1px solid var(--line); border-radius: 12px; padding: 0 14px;
+  background: var(--card-inner); color: var(--text); outline: none;
+  transition: all 0.2s ease;
+}
+.field input, .field select { height: 42px; }
+.field textarea { min-height: 96px; padding: 12px; line-height: 1.45; resize: vertical; }
+.field.full { grid-column: 1/-1; }
+.switch-row { display: grid; gap: 12px; }
+.toggle {
+  min-height: 52px; display: flex; justify-content: space-between; align-items: center;
+  gap: 14px; padding: 12px 18px; border: 1px solid var(--line); border-radius: 12px;
+  background: var(--card-inner); font-weight: 700; font-size: 14px;
+}
+.toggle input { width: 44px; height: 24px; accent-color: var(--primary); }
+
+/* Progress Items & Glow Bar */
+.progress-list { display: grid; gap: 16px; }
+.progress-account {
+  border: 1px solid var(--line); border-radius: 14px;
+  background: var(--card-inner); padding: 18px 20px;
+}
+.progress-heading {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin-bottom: 14px;
+}
+.progress-heading h3 { margin: 0; font-size: 16px; font-weight: 800; }
+.progress-heading span { color: var(--accent); font-weight: 800; font-size: 14px; }
+.progress-items { display: grid; gap: 12px; }
+.progress-row {
+  display: grid; grid-template-columns: 140px minmax(120px, 1fr) 90px 110px;
+  gap: 16px; align-items: center; font-size: 13px;
+}
+.progress-row strong { font-size: 13px; color: var(--text); }
+.progress-bar {
+  height: 9px; border-radius: 999px; background: rgba(255, 255, 255, 0.08);
+  overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
+}
+.progress-fill {
+  height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, #0284C7, #38BDF8);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+  transition: width 0.4s ease;
+}
+.progress-points { color: #10B981; font-weight: 800; text-align: right; }
+.progress-status { color: var(--muted); font-size: 12px; display: block; margin-top: 4px; }
+
+/* History Chart */
+.history-chart-card { margin-top: 4px; }
+.chart-controls { display: flex; align-items: center; gap: 8px; }
+.chart-pill {
+  padding: 4px 14px; border-radius: 999px; font-size: 12px; font-weight: 800;
+  border: 1px solid var(--line); background: transparent; color: var(--sub);
+  transition: all 0.2s ease;
+}
+.chart-pill.active { background: var(--teal-soft); color: var(--teal-dark); border-color: rgba(56, 189, 248, 0.3); }
+.chart-container {
+  min-height: 180px; padding: 24px 12px 8px; display: flex; align-items: flex-end;
+  gap: 12px; overflow-x: auto;
+}
+.chart-bars-row { width: 100%; display: flex; align-items: flex-end; gap: 12px; min-height: 160px; }
+.chart-col {
+  flex: 1; min-width: 38px; display: flex; flex-direction: column;
+  align-items: center; gap: 8px; cursor: pointer; transition: transform 0.2s ease;
+}
+.chart-col:hover { transform: translateY(-4px); }
+.chart-val { font-size: 11px; font-weight: 800; color: #10B981; }
+.chart-bar-track {
+  width: 18px; height: 110px; border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06); display: flex; align-items: flex-end;
+  overflow: hidden;
+}
+.chart-bar-fill {
+  width: 100%; border-radius: 6px;
+  background: linear-gradient(180deg, #38BDF8 0%, #0284C7 100%);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
+  transition: height 0.5s ease;
+}
+.chart-date { font-size: 11px; color: var(--muted); white-space: nowrap; }
+
+/* Log Box (Terminal Style) */
+.log-box {
+  background: var(--terminal-bg);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  color: #E2E8F0;
+  padding: 18px 20px;
+  font-family: Consolas, Monaco, monospace;
+  font-size: 13px;
+  line-height: 1.65;
+  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.5);
+  height: 340px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+.log-box.large { height: 560px; }
+.log-line.error { color: #F87171; }
+.log-line.warn { color: #FBBF24; }
+.log-line.debug { color: #94A3B8; }
+
+/* Settings & Timeline */
+.settings-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.setting-item {
+  border: 1px solid var(--line); border-radius: 12px;
+  background: var(--card-inner); padding: 14px 16px;
+}
+.setting-item span { display: block; color: var(--muted); font-size: 12px; font-weight: 700; }
+.setting-item strong {
+  display: block; margin-top: 6px; color: var(--accent);
+  font: 800 13px/1.3 monospace; word-break: break-word;
+}
+.task-timeline { display: grid; gap: 10px; margin-top: 18px; max-height: 320px; overflow: auto; }
+.task-event {
+  display: grid; grid-template-columns: 120px minmax(140px, 1fr) 100px 80px minmax(180px, 2fr);
+  gap: 12px; align-items: center; border: 1px solid var(--line);
+  background: var(--card-inner); border-radius: 12px; padding: 12px 16px; font-size: 13px;
+}
+
+/* Modal */
+.modal {
+  position: fixed; inset: 0; background: rgba(5, 8, 15, 0.7);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  display: grid; place-items: center; padding: 24px; z-index: 50;
+}
+.modal.hidden { display: none; }
+.modal-card {
+  width: min(720px, 100%); max-height: calc(100vh - 48px); overflow: auto;
+  background: var(--modal-bg); border: 1px solid var(--line);
+  border-radius: 20px; padding: 32px 36px; box-shadow: var(--shadow);
+}
+.modal-card h2 { margin: 0 0 20px; font-size: 20px; font-weight: 800; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
+
+/* Empty state */
+.empty-state {
+  padding: 36px; text-align: center; color: var(--sub);
+  background: var(--card-inner); border: 1px dashed var(--line);
+  border-radius: 14px; font-size: 14px;
+}
+
+@media (max-width: 960px) {
+  .app { grid-template-columns: 1fr; }
+  .sidebar { position: static; padding: 16px; }
+  .sidebar nav { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+  .topbar { padding: 20px; }
+  .content-grid { padding: 0 20px 30px; }
+  .split-grid, .bottom-grid { grid-template-columns: 1fr; }
+  .form-grid { grid-template-columns: 1fr; }
+  .progress-row { grid-template-columns: 1fr; gap: 8px; }
+}
+`;
 }
 function clientJs() {
     return `
@@ -1793,8 +2249,27 @@ const workerLabels = {
   doDailySet:'每日任务', doClaimBonusPoints:'领取奖励积分', doSpecialPromotions:'特殊活动',
   doMorePromotions:'更多推广', doPunchCards:'打卡活动', doAppPromotions:'App 活动',
   doDesktopSearch:'PC搜索', doMobileSearch:'移动搜索', doDailyCheckIn:'每日签到',
-  doReadToEarn:'阅读赚取'
+  doReadToEarn:'阅读赚取', doDesktopApp:'桌面应用专享'
 };
+function initTheme(){
+  const saved = localStorage.getItem('mrs_theme') || 'dark';
+  applyTheme(saved);
+}
+function applyTheme(theme){
+  let active = theme;
+  if (theme === 'auto') {
+    active = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  }
+  document.documentElement.setAttribute('data-theme', active);
+  document.querySelectorAll('.theme-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-theme-val') === theme);
+  });
+}
+window.setTheme = function(theme){
+  localStorage.setItem('mrs_theme', theme);
+  applyTheme(theme);
+};
+initTheme();
 const subtitles = {
   dashboard:'查看运行概况，维护账号、任务与系统参数。',
   accounts:'维护 Microsoft 账号，敏感字段保存后不在页面回显。',
@@ -1846,7 +2321,7 @@ function renderAll(){
   if (!(currentView === 'wecom' && wecomDirty && !wecomSaving)) renderWeCom();
   renderSystem();
 }
-function metric(name,value,sub,icon){return '<article class="card metric"><div class="metric-icon">'+icon+'</div><div><small>'+name+'</small><strong>'+value+'</strong><small>'+sub+'</small></div></article>'}
+function metric(name,value,sub,icon,extraClass=''){return '<article class="card metric '+extraClass+'"><div class="metric-icon">'+icon+'</div><div><small>'+name+'</small><strong>'+value+'</strong><small class="metric-hint">'+sub+'</small></div></article>'}
 function safeStateClass(value){return String(value || 'unknown').toLowerCase().replace(/[^a-z-]/g, '') || 'unknown'}
 function accountStatusCell(a){
   const s = a.status || {};
@@ -1988,18 +2463,85 @@ function runControls(){
 function scheduleForm(){
   return '<form id="scheduleForm" class="card section"><h2>定时设置</h2><p class="section-note">填写 5 段 cron 表达式，保存后容器内 cron 会即时重载。例：0 7 * * *</p><div class="form-grid"><div class="field"><label>CRON_SCHEDULE</label><input name="schedule" value="'+esc(state.schedule.schedule)+'" placeholder="0 7 * * *"></div><div class="field"><label>时区</label><input value="'+esc(state.schedule.timezone)+'" disabled></div></div><div class="modal-actions"><button class="primary-btn">保存定时</button></div></form>';
 }
+let currentHistoryDays = 7;
+window.switchHistoryRange = function(days){
+  currentHistoryDays = days;
+  document.querySelectorAll('.chart-pill').forEach(btn => {
+    btn.classList.toggle('active', Number(btn.getAttribute('data-days')) === days);
+  });
+  loadAndRenderHistoryChart(days);
+};
+
+async function loadAndRenderHistoryChart(days = currentHistoryDays){
+  const container = el('historyChartContainer');
+  if (!container) return;
+  try {
+    const range = days === 7 ? 'week' : 'month';
+    const res = await api('/api/points-calendar?range=' + range);
+    const records = Array.isArray(res.calendar) ? res.calendar : (Array.isArray(res.records) ? res.records : []);
+    const dailyMap = new Map();
+    for (const r of records) {
+      const d = r.dateKey || r.date || '';
+      if (!d) continue;
+      dailyMap.set(d, (dailyMap.get(d) || 0) + Number(r.todayGained || r.gained || 0));
+    }
+    const sortedDates = Array.from(dailyMap.keys()).sort().slice(-days);
+    if (!sortedDates.length) {
+      container.innerHTML = '<div class="empty-state">暂无历史积分趋势数据</div>';
+      return;
+    }
+    const maxVal = Math.max(1, ...sortedDates.map(d => dailyMap.get(d)));
+    container.innerHTML = '<div class="chart-bars-row">' + sortedDates.map(d => {
+      const val = dailyMap.get(d);
+      const heightPercent = Math.max(14, Math.round((val / maxVal) * 100));
+      const shortDate = d.length >= 10 ? d.slice(5) : d;
+      return '<div class="chart-col" title="' + d + '：新增 +' + val + ' 积分">'
+        + '<div class="chart-val">+' + val + '</div>'
+        + '<div class="chart-bar-track"><div class="chart-bar-fill" style="height:' + heightPercent + '%"></div></div>'
+        + '<div class="chart-date">' + shortDate + '</div>'
+        + '</div>';
+    }).join('') + '</div>';
+  } catch (err) {
+    container.innerHTML = '<div class="empty-state">加载历史趋势失败: ' + esc(err.message) + '</div>';
+  }
+}
+
 function renderDashboard(){
   const s = state.stats;
+  const groups = Array.isArray(state.taskProgress) ? state.taskProgress : [];
+  let totalTodayGained = 0;
+  let totalCurrentBalance = 0;
+  let totalTasksCompleted = 0;
+  let totalTasksCount = 0;
+
+  for (const g of groups) {
+    const point = state.pointToday?.[g.key] || {};
+    totalTodayGained += Number(point.todayGained || g.gainedPoints || 0);
+    totalCurrentBalance += Number(g.currentPoints || g.finalPoints || 0);
+    for (const item of (g.items || [])) {
+      totalTasksCount++;
+      if (item.status === '已完成' || (item.total > 0 && item.completed >= item.total)) {
+        totalTasksCompleted++;
+      }
+    }
+  }
+  const completionRate = totalTasksCount > 0 ? Math.round((totalTasksCompleted / totalTasksCount) * 100) : 0;
+  const isRunning = state.runState?.running;
+  const runStatusText = isRunning ? '⚡ 执行中' : '待命中';
+  const runStatusHint = isRunning ? (state.runState.mode === 'account-check' ? '正在检测账号状态' : '正在执行任务') : ('Cron: ' + (state.schedule?.schedule || '0 9,15 * * *'));
+
   el('dashboard').innerHTML = '<div class="content-grid">'
     + '<div class="metrics">'
-    + metric('账号数量', s.accounts, '邮箱已脱敏展示', '◎')
-    + metric('启用任务', s.workersEnabled, '搜索、阅读、活动任务', '✓')
-    + metric('运行状态', /^暂无/.test(s.lastRun) ? '待运行' : '有记录', '默认等待计划触发', '◷')
-    + metric('安全项', '4', '敏感字段不下发前端', '◇')
+    + metric('今日增加积分', '+' + totalTodayGained, '多账号累计到账', '🌟', 'hero-earned')
+    + metric('当前总积分', totalCurrentBalance > 0 ? totalCurrentBalance.toLocaleString() : '--', '已同步微软账户', '💰', 'hero-accent')
+    + metric('任务达成率', completionRate + '%', totalTasksCompleted + ' / ' + totalTasksCount + ' 项已完成', '🎯', 'hero-gold')
+    + metric('托管账号数', s.accounts + ' 个', '脱敏展示与独立会话', '👥')
+    + metric('运行状态', runStatusText, runStatusHint, isRunning ? '⚡' : '◷')
     + '</div>'
     + '<div class="split-grid"><section class="card section"><div class="toolbar"><div><h2>账号设置</h2><p class="section-note">密码、TOTP 与代理密码保存后不在页面回显；状态检测会先验证账号是否能登录。</p></div>'+accountActions()+'</div>'+accountTable(3)+'</section>'
     + '<section class="card section"><h2>任务配置</h2><p class="section-note">常用任务开关与执行参数。</p><form id="dashboardTaskForm" class="switch-row">'+taskToggles(3)+'<div class="modal-actions"><button class="primary-btn">保存配置</button></div></form></section></div>'
     + '<section class="card section"><h2>任务进度</h2><p class="section-note">按账号展示本次运行的搜索进度、当前执行任务和具体活动明细。</p>'+taskProgress()+'</section>'
+    + '<section class="card section history-chart-card"><div class="toolbar"><div><h2>📈 每日积分增长历史趋势</h2><p class="section-note">直观查看过去各周期内每日积分到账收益。</p></div><div class="chart-controls"><button class="chart-pill active" data-days="7" onclick="switchHistoryRange(7)">7 日</button><button class="chart-pill" data-days="30" onclick="switchHistoryRange(30)">30 日</button></div></div><div class="chart-container" id="historyChartContainer"><div class="empty-state">加载中...</div></div></section>'
     + runControls()
     + '</div>';
   document.querySelector('#dashboardTaskForm')?.addEventListener('submit', saveConfig);
@@ -2012,6 +2554,7 @@ function renderDashboard(){
     updateRunAccountSelect();
   });
   updateRunAccountSelect();
+  loadAndRenderHistoryChart(currentHistoryDays);
 }
 function renderAccounts(){
   el('accounts').innerHTML = '<div class="content-grid"><section class="card section"><div class="toolbar"><div><h2>账号设置</h2><p class="section-note">列表只展示脱敏邮箱、配置状态和账号检测结果。</p></div>'+accountActions()+'</div>'+accountTable()+'</section></div>';

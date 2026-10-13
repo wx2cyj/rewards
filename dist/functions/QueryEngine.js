@@ -504,6 +504,19 @@ class QueryCore {
                 }
             }
         }
+        // 如果聚合源均未拿到数据（如触发 403 限流或平台异常），自动直连百度官方实时热榜保底（免 Key、免限流）
+        if (titles.size === 0) {
+            this.bot.logger.info(this.bot.isMobile, 'SEARCH-CHINA-TRENDS', '聚合源未返回数据，尝试直连百度官方移动端实时热榜 (免Key直连)...');
+            try {
+                const baiduWords = await this.fetchBaiduOfficialHotWords();
+                if (baiduWords.length) {
+                    baiduWords.forEach(w => titles.add(w));
+                    this.bot.logger.info(this.bot.isMobile, 'SEARCH-CHINA-TRENDS', `百度官方实时热榜保底成功 | 数量=${baiduWords.length} | 累计=${titles.size}`);
+                }
+            } catch (e) {
+                this.bot.logger.warn(this.bot.isMobile, 'SEARCH-CHINA-TRENDS', `百度官方实时热榜保底失败: ${e instanceof Error ? e.message : String(e)}`);
+            }
+        }
         if (titles.size === 0) {
             this.bot.logger.warn(this.bot.isMobile, 'SEARCH-CHINA-TRENDS', `所有 ${allSources.length} 个热搜源均失败，将仅依赖其他查询源`);
         }
@@ -511,6 +524,23 @@ class QueryCore {
             this.bot.logger.info(this.bot.isMobile, 'SEARCH-CHINA-TRENDS', `中国热搜获取完成 | 最终词数=${titles.size} | 成功源=${picked.filter(s => !failedSources.includes(s)).join(',') || fallback.filter(s => titles.size > 0).join(',')}`, 'green');
         }
         return Array.from(titles);
+    }
+    /**
+     * 直连百度官方移动端实时热搜榜（免 Key、无频率限制）。
+     */
+    async fetchBaiduOfficialHotWords() {
+        const request = {
+            url: 'https://top.baidu.com/api/board?platform=wise&tab=realtime',
+            method: 'GET',
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+                ...(this.bot.fingerprint?.headers ?? {})
+            },
+            timeout: 10000
+        };
+        const response = await this.bot.axios.request(request, this.bot.config.proxy.queryEngine);
+        const cards = response.data?.data?.cards?.[0]?.content?.[0]?.content || [];
+        return cards.map(c => c.word?.trim()).filter(Boolean);
     }
     /**
      * 构造 gmya.net 热搜 API 的请求 URL。

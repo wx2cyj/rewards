@@ -15,7 +15,8 @@
         "doDesktopSearch": true,
         "doMobileSearch": true,
         "doDailyCheckIn": true,
-        "doReadToEarn": true
+        "doReadToEarn": true,
+        "doDesktopApp": true
     },
     "searchOnBingLocalQueries": false,
     "globalTimeout": "50sec",

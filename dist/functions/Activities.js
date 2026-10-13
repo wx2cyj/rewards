@@ -5,6 +5,7 @@ const DailyCheckIn_1 = require("./activities/app/DailyCheckIn");
 const ReadToEarn_1 = require("./activities/app/ReadToEarn");
 const AppReward_1 = require("./activities/app/AppReward");
 // API
+const DesktopApp_1 = require("./activities/api/DesktopApp");
 const UrlReward_1 = require("./activities/api/UrlReward");
 const UrlRewardNew_1 = require("./activities/api/UrlRewardNew");
 const Quiz_1 = require("./activities/api/Quiz");
@@ -87,6 +88,11 @@ class Activities {
         this.doDailyCheckIn = async () => {
             const dailyCheckIn = new DailyCheckIn_1.DailyCheckIn(this.bot);
             await dailyCheckIn.doDailyCheckIn();
+        };
+        // Desktop App Activities
+        this.doDesktopApp = async () => {
+            const desktopApp = new DesktopApp_1.DesktopApp(this.bot);
+            await desktopApp.doDesktopApp();
         };
         this.bot = bot;
     }
