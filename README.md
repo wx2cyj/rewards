@@ -128,6 +128,21 @@ docker logs -f rewards
   - 强化卡死进程自愈清理：不仅杀死当前 PID，同时杀死进程组及残留孤儿 node / chrome 进程；
   - 修复 `crontab.template`、`check-browser.js` 与 `run_daily.sh` 的 `PLAYWRIGHT_BROWSERS_PATH` 环境变量，彻底消除 cron 环境下误报缺少 Chromium 的问题。
 
+#### 🔬 故障复盘（2026-10-20 实际案例）
+
+生产环境（飞牛 fnOS + Docker）出现「任务卡死近 8 小时、15:00 定时恢复失败」的事故，链路如下，可作为同类问题的排查范本：
+
+| 环节 | 现象 | 根因 |
+| :--- | :--- | :--- |
+| ① 首次挂起 | 10:19:41 移动端搜索 `click` 阶段无任何后续日志 | 点击外部第三方页面后 CDP 通道阻塞 |
+| ② 超时失效 | 阶段超时 63s 已到，但进程不退出、不报错 | `reject()` 写在 `await page.close()` 之后，`page.close()` 永不返回 → 超时永不触发 |
+| ③ 二次死锁 | 即使外部强制超时也无响应 | `catch` 分支中 `await operationPromise` 再次等待已挂起的操作 |
+| ④ 自愈失败 | 15:00 调度器判定卡死并重启，但新任务被拒绝 | 仅 `SIGKILL` 了 `/bin/bash run_daily.sh`，其子进程 `npm start` / `node dist/index.js` / Chromium 变成孤儿存活 |
+| ⑤ 阈值冲突 | 报 `已有任务运行中，PID: 11762... 拒绝启动` | `server.js` 判 2 小时，`run_daily.sh` 判 8 小时，孤儿进程 6 小时 < 8 小时故视为"正常" |
+| ⑥ cron 误报 | `Chromium Headless Shell is missing` | cron 未继承 `PLAYWRIGHT_BROWSERS_PATH=0`，回退到不存在的 `/ms-playwright` |
+
+**处置与验证（当日实测）**：清理孤儿进程与锁文件后重跑，三个账号全部完成 —— 账号 1 `+342` 分、账号 2 `+48` 分（剩余额度已满）、账号 3 `+195` 分，任务链路恢复正常。
+
 ### [v3.2.0] - 2026-10-13
 - 🚀 **新增「桌面应用每周专属任务」全自动打卡**：逆向官方客户端特征头与打孔卡机制，每周全自动多拿 70 积分；
 - 🎨 **全新 Fluent 毛玻璃 Web 控制台**：重构深浅双模式设计系统，引入五核 Hero 大屏看板与 7/30 天历史积分增长趋势柱状图；
