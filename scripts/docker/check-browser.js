@@ -1,6 +1,6 @@
 const fs = require('node:fs')
 
-const DEFAULT_BROWSERS_PATH = '/ms-playwright'
+const DEFAULT_BROWSERS_PATH = '0'
 const INSTALL_COMMAND = 'docker compose --profile setup run --rm browser-install'
 
 function resolveBrowsersPath(env = process.env) {

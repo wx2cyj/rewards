@@ -109,10 +109,16 @@ async function runSearchStage(options) {
             const elapsedMs = Date.now() - startedAt;
             timeoutError = new SearchOperationError(stage, `搜索阶段超时 | stage=${stage} | timeoutMs=${timeoutMs}`, timeoutMs, elapsedMs, true);
             controller.abort(timeoutError);
+            reject(timeoutError);
             void (async () => {
-                if (!page.isClosed())
-                    await page.close({ runBeforeUnload: false }).catch(() => { });
-                reject(timeoutError);
+                try {
+                    if (page && !page.isClosed()) {
+                        await Promise.race([
+                            page.close({ runBeforeUnload: false }).catch(() => { }),
+                            new Promise(res => setTimeout(res, 3000))
+                        ]);
+                    }
+                } catch { }
             })();
         }, timeoutMs);
     });
@@ -121,7 +127,6 @@ async function runSearchStage(options) {
     }
     catch (error) {
         if (timedOut && timeoutError) {
-            await operationPromise.catch(() => undefined);
             throw timeoutError;
         }
         if (error instanceof SearchOperationError)

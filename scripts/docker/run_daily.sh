@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-export PLAYWRIGHT_BROWSERS_PATH="${PLAYWRIGHT_BROWSERS_PATH:-/ms-playwright}"
+export PLAYWRIGHT_BROWSERS_PATH="${PLAYWRIGHT_BROWSERS_PATH:-0}"
 export TZ="${TZ:-UTC}"
 
 cd /usr/src/microsoft-rewards-script
@@ -119,7 +119,7 @@ find_other_runner() {
 
 handle_existing_runner() {
     local existing_pid="$1"
-    local timeout_hours=${STUCK_PROCESS_TIMEOUT_HOURS:-8}
+    local timeout_hours=${STUCK_PROCESS_TIMEOUT_HOURS:-2}
     local timeout_seconds=$((timeout_hours * 3600))
     local age
 
@@ -127,8 +127,12 @@ handle_existing_runner() {
     if [[ "$age" =~ ^[0-9]+$ ]] && [ "$age" -gt "$timeout_seconds" ]; then
         log "终止卡住的进程 $existing_pid (${age}s > ${timeout_hours}h)"
         kill -TERM "$existing_pid" 2>/dev/null || true
-        sleep 5
+        pkill -KILL -P "$existing_pid" 2>/dev/null || true
+        sleep 2
         kill -KILL "$existing_pid" 2>/dev/null || true
+        pkill -9 -f '[n]ode .*dist/index\.js' 2>/dev/null || true
+        pkill -9 -f 'chrome-headless-shell' 2>/dev/null || true
+        pkill -9 -f '[n]pm start' 2>/dev/null || true
         remove_stale_lock
         return 0
     fi

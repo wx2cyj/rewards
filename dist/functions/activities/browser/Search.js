@@ -451,22 +451,30 @@ class Search extends Workers_1.Workers {
         }
     }
     async clickRandomLink(page, isMobile, signal, visitTimeMs) {
+        const dismissDialog = (dialog) => {
+            dialog.dismiss().catch(() => {});
+        };
         try {
             this.bot.logger.debug(isMobile, 'SEARCH-RANDOM-CLICK', '尝试点击随机搜索结果链接');
             const searchPageUrl = page.url();
             const pagesBeforeClick = new Set(page.context().pages());
             signal.throwIfAborted();
+            try { page.on('dialog', dismissDialog); } catch {}
             const resultLink = page.locator('#b_results .b_algo h2 a').first();
-            const clicked = await resultLink
-                .waitFor({ state: 'visible', timeout: 5000 })
-                .then(async () => {
-                await resultLink.click({ timeout: 10000 });
-                return true;
-            })
-                .catch(() => false);
+            const clicked = await Promise.race([
+                resultLink
+                    .waitFor({ state: 'visible', timeout: 5000 })
+                    .then(async () => {
+                        await resultLink.click({ timeout: 8000, noWaitAfter: true });
+                        return true;
+                    })
+                    .catch(() => false),
+                new Promise(resolve => setTimeout(() => resolve(false), 10000))
+            ]);
             signal.throwIfAborted();
             if (!clicked) {
-                this.bot.logger.debug(isMobile, 'SEARCH-RANDOM-CLICK', '未找到可点击结果，跳过本次随机访问');
+                this.bot.logger.debug(isMobile, 'SEARCH-RANDOM-CLICK', '未找到可点击结果或点击超时，跳过本次随机访问');
+                try { page.off('dialog', dismissDialog); } catch {}
                 return;
             }
             await (0, SearchExecution_1.abortableWait)(visitTimeMs, signal);
@@ -475,19 +483,29 @@ class Search extends Workers_1.Workers {
                 .pages()
                 .filter(candidate => candidate !== page && !pagesBeforeClick.has(candidate));
             if (openedPages.length > 0) {
-                await Promise.allSettled(openedPages.map(openedPage => openedPage.close({ runBeforeUnload: false })));
+                await Promise.allSettled(openedPages.map(openedPage =>
+                    Promise.race([
+                        openedPage.close({ runBeforeUnload: false }).catch(() => {}),
+                        new Promise(resolve => setTimeout(resolve, 3000))
+                    ])
+                ));
                 this.bot.logger.debug(isMobile, 'SEARCH-RANDOM-CLICK', `已关闭本次打开的结果标签页 | count=${openedPages.length}`);
             }
             else if (page.url() !== searchPageUrl) {
-                await page.goto(searchPageUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
+                await Promise.race([
+                    page.goto(searchPageUrl, { waitUntil: 'domcontentloaded', timeout: 10000 }).catch(() => {}),
+                    new Promise(resolve => setTimeout(resolve, 12000))
+                ]);
                 this.bot.logger.debug(isMobile, 'SEARCH-RANDOM-CLICK', '结果在当前标签页打开，已返回搜索页面');
             }
             else {
                 this.bot.logger.debug(isMobile, 'SEARCH-RANDOM-CLICK', '点击未产生新标签或导航，继续搜索');
             }
+            try { page.off('dialog', dismissDialog); } catch {}
             signal.throwIfAborted();
         }
         catch (error) {
+            try { page.off('dialog', dismissDialog); } catch {}
             if (signal.aborted)
                 throw signal.reason ?? error;
             this.bot.logger.error(isMobile, 'SEARCH-RANDOM-CLICK', `随机点击过程中出现错误 | message=${error instanceof Error ? error.message : String(error)}`);
