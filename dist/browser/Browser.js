@@ -61,6 +61,25 @@ class Browser {
                     }
                 });
             });
+            // 消除 Docker/Linux 无头环境下 WebGL 软件渲染 (SwiftShader/llvmpipe) 破绽
+            await context.addInitScript(() => {
+                const VENDOR = 'Google Inc. (Intel)';
+                const RENDERER = 'ANGLE (Intel, Intel(R) UHD Graphics 630 (0x00003E9B) Direct3D11 vs_5_0 ps_5_0, D3D11)';
+                const patch = (proto) => {
+                    if (!proto || !proto.getParameter) return;
+                    const orig = proto.getParameter;
+                    proto.getParameter = function (p) {
+                        if (p === 37445) return VENDOR;
+                        if (p === 37446) return RENDERER;
+                        return orig.call(this, p);
+                    };
+                    try { proto.getParameter.toString = () => orig.toString(); } catch {}
+                };
+                try {
+                    if (window.WebGLRenderingContext) patch(WebGLRenderingContext.prototype);
+                    if (window.WebGL2RenderingContext) patch(WebGL2RenderingContext.prototype);
+                } catch {}
+            });
             // 设置默认超时时间
             context.setDefaultTimeout(this.bot.utils.stringToNumber(this.bot.config?.globalTimeout ?? 30000));
             // 添加保存的cookies

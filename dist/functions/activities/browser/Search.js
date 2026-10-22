@@ -114,7 +114,7 @@ class Search extends Workers_1.Workers {
                 }
             } catch {}
             let stagnantLoop = 0;
-            const stagnantLoopMax = 10;
+            const stagnantLoopMax = 5;
             let isStagnant = false;
             for (let i = 0; i < queries.length; i++) {
                 if (Date.now() >= roundDeadline) {

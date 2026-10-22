@@ -77,6 +77,7 @@ exports.ConfigSchema = zod_1.z.object({
     sessionPath: zod_1.z.string(),
     headless: zod_1.z.boolean(),
     clusters: zod_1.z.number().int().nonnegative(),
+    accountGapSec: zod_1.z.number().int().nonnegative().optional(),
     errorDiagnostics: zod_1.z.boolean(),
     ensureStreakProtection: zod_1.z.boolean(),
     workers: zod_1.z.object({
@@ -140,6 +141,7 @@ const defaultConfig = {
     sessionPath: 'sessions',
     headless: true,
     clusters: 1,
+    accountGapSec: 60,
     errorDiagnostics: true,
     ensureStreakProtection: true,
     workers: {

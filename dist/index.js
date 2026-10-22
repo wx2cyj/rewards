@@ -659,6 +659,12 @@ class MicrosoftRewardsBot {
                 accountStats.push(stat);
                 await this.sendWeComAccountSummary(stat);
             }
+            const currentAccountIndex = accounts.indexOf(account);
+            const gapSec = this.config.accountGapSec ?? 60;
+            if (gapSec > 0 && currentAccountIndex < accounts.length - 1 && !isAccountStatusCheckOnly()) {
+                this.logger.info('main', 'ACCOUNT-GAP', `等待 ${gapSec} 秒后执行下一个账号，模拟真人作息与错峰防风控...`);
+                await this.utils.wait(gapSec * 1000);
+            }
         }
         if (this.config.clusters <= 1 && cluster_1.default.isPrimary) {
             const totals = (0, RunSummary_1.calculateKnownPointTotals)(accountStats);
@@ -1134,6 +1140,8 @@ class MicrosoftRewardsBot {
                 else if (this.config.workers.doDailyCheckIn) {
                     skipAppTask('每日签到', hasKnownGeoLocale ? 'App访问令牌不可用' : 'dashboard 未提供有效地区');
                 }
+                // 维持必应视觉搜索连续打卡 (vsstreak)
+                await this.activities.doVisualSearchStreak().catch(() => {});
                 if (this.config.workers.doReadToEarn && hasAppAccessToken && hasKnownGeoLocale) {
                     await runPointTask('阅读赚取', async () => this.activities.doReadToEarn());
                 }
@@ -1144,6 +1152,7 @@ class MicrosoftRewardsBot {
                     if (!skipDashboardFieldTask('打卡活动', ['punchCards'])) {
                         await runPointTask('打卡活动', async () => this.workers.doPunchCards(data, this.mainMobilePage));
                     }
+                    await runPointTask('专题打孔卡', async () => this.workers.doQuestPunchCards());
                 }
                 if (this.config.workers.doDesktopApp ?? true) {
                     await runPointTask('桌面专享任务', async () => this.workers.doDesktopAppPromotions());

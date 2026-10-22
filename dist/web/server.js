@@ -723,6 +723,7 @@ function publicConfig(config) {
     return {
         headless: config.headless,
         clusters: config.clusters,
+        accountGapSec: config.accountGapSec ?? 60,
         debugLogs: config.debugLogs,
         errorDiagnostics: config.errorDiagnostics,
         ensureStreakProtection: config.ensureStreakProtection,
@@ -851,6 +852,7 @@ function safeConfigPatch(config, input) {
     const updated = {
         ...config,
         clusters: Number(input.clusters ?? config.clusters),
+        accountGapSec: Number(input.accountGapSec ?? config.accountGapSec ?? 60),
         debugLogs: Boolean(input.debugLogs ?? config.debugLogs),
         errorDiagnostics: Boolean(input.errorDiagnostics ?? config.errorDiagnostics),
         ensureStreakProtection: Boolean(input.ensureStreakProtection ?? config.ensureStreakProtection),
@@ -1008,6 +1010,7 @@ async function handleApi(req, res, url) {
                 accounts: accounts.length,
                 workersEnabled,
                 clusters: config.clusters,
+        accountGapSec: config.accountGapSec ?? 60,
                 headless: config.headless,
                 schedule: currentSchedule().schedule,
                 lastRun: readLastRunSummary()
@@ -2601,7 +2604,7 @@ function renderTasks(){
   const disabled = state.runState?.running ? 'disabled' : '';
   const accountOptions = (state.accounts || []).map(a => '<option value="'+(Number(a.id)+1)+'">账号 '+(Number(a.id)+1)+' · '+esc(a.maskedEmail)+'</option>').join('');
   el('tasks').innerHTML = '<div class="content-grid">'+scheduleForm()+'<form id="taskForm">'
-    + '<section class="card section"><div class="toolbar"><div><h2>任务配置</h2><p class="section-note">保存后会写入本地配置文件。</p></div><div class="top-actions"><select id="claimBonusAccount" '+disabled+'><option value="all">全部账号</option>'+accountOptions+'</select><button type="button" id="claimBonusNowBtn" class="primary-btn" '+disabled+'>立即领取奖励积分</button></div></div><div class="switch-row">'+taskToggles()+'</div><div class="form-grid" style="margin-top:16px">'+field('clusters','集群数',c.clusters,'number')+field('globalTimeout','全局超时',c.globalTimeout)+field('searchDelayMin','搜索最小延迟',c.searchSettings.searchDelay.min)+field('searchDelayMax','搜索最大延迟',c.searchSettings.searchDelay.max)+field('readDelayMin','阅读最小延迟',c.searchSettings.readDelay.min)+field('readDelayMax','阅读最大延迟',c.searchSettings.readDelay.max)+'</div></section>'
+    + '<section class="card section"><div class="toolbar"><div><h2>任务配置</h2><p class="section-note">保存后会写入本地配置文件。</p></div><div class="top-actions"><select id="claimBonusAccount" '+disabled+'><option value="all">全部账号</option>'+accountOptions+'</select><button type="button" id="claimBonusNowBtn" class="primary-btn" '+disabled+'>立即领取奖励积分</button></div></div><div class="switch-row">'+taskToggles()+'</div><div class="form-grid" style="margin-top:16px">'+field('clusters','集群数',c.clusters,'number')+field('accountGapSec','账号错峰间隔(秒)',c.accountGapSec ?? 60,'number')+field('globalTimeout','全局超时',c.globalTimeout)+field('searchDelayMin','搜索最小延迟',c.searchSettings.searchDelay.min)+field('searchDelayMax','搜索最大延迟',c.searchSettings.searchDelay.max)+field('readDelayMin','阅读最小延迟',c.searchSettings.readDelay.min)+field('readDelayMax','阅读最大延迟',c.searchSettings.readDelay.max)+'</div></section>'
     + '<section class="card section"><h2>礼品卡监控</h2><p class="section-note">按关键词监控积分商城礼品卡；发现可兑换目标时复用已启用的推送通道发送消息。</p><div class="switch-row">'
     + '<label class="toggle"><span>启用礼品卡监控</span><input type="checkbox" name="giftCardMonitorEnabled" '+(g.enabled?'checked':'')+'></label>'
     + '<label class="toggle"><span>仅在积分足够时推送</span><input type="checkbox" name="giftCardRequireEnoughPoints" '+(g.requireEnoughPoints?'checked':'')+'></label>'
@@ -2833,6 +2836,7 @@ async function saveConfig(event){
     data.giftCardNotifyOnce = Boolean(form.elements.giftCardNotifyOnce?.checked);
   }
   data.clusters = Number(data.clusters || 1);
+  data.accountGapSec = Number(data.accountGapSec || 60);
   await api('/api/config', {method:'POST', body:JSON.stringify(data)});
   await loadState(); switchView('tasks');
 }

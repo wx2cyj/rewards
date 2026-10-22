@@ -12,6 +12,7 @@ export declare class Workers {
     doSpecialPromotions(data: DashboardData): Promise<void>;
     doClaimBonusPoints(data: DashboardData): Promise<ClaimBonusOutcome>;
     doPunchCards(data: DashboardData, page: Page): Promise<void>;
+    doDesktopAppPromotions(): Promise<void>;
+    doQuestPunchCards(): Promise<void>;
     private solveActivities;
 }
-//# sourceMappingURL=Workers.d.ts.map

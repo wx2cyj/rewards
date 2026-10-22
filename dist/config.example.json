@@ -3,6 +3,7 @@
     "sessionPath": "sessions",
     "headless": false,
     "clusters": 1,
+    "accountGapSec": 60,
     "errorDiagnostics": false,
     "ensureStreakProtection": true,
     "workers": {

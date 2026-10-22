@@ -16,8 +16,10 @@ export default class Activities {
     doDoubleSearchPoints: (promotion: PurplePromotionalItem) => Promise<void>;
     doClaimBonusPoints: () => Promise<ClaimBonusOutcome>;
     doStreakProtection: () => Promise<void>;
+    doVisualSearchStreak: () => Promise<void>;
+    doQuestPunchCards: () => Promise<void>;
     doAppReward: (promotion: Promotion) => Promise<void>;
     doReadToEarn: () => Promise<void>;
     doDailyCheckIn: () => Promise<void>;
+    doDesktopApp: () => Promise<void>;
 }
-//# sourceMappingURL=Activities.d.ts.map

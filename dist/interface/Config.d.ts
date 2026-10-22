@@ -3,6 +3,7 @@ export interface Config {
     sessionPath: string;
     headless: boolean;
     clusters: number;
+    accountGapSec?: number;
     errorDiagnostics: boolean;
     ensureStreakProtection: boolean;
     workers: ConfigWorkers;

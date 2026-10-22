@@ -217,6 +217,9 @@ class Workers {
     async doDesktopAppPromotions() {
         await this.bot.activities.doDesktopApp();
     }
+    async doQuestPunchCards() {
+        await this.bot.activities.doQuestPunchCards();
+    }
 }
 exports.Workers = Workers;
 //# sourceMappingURL=Workers.js.map

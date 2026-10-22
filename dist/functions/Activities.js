@@ -6,6 +6,8 @@ const ReadToEarn_1 = require("./activities/app/ReadToEarn");
 const AppReward_1 = require("./activities/app/AppReward");
 // API
 const DesktopApp_1 = require("./activities/api/DesktopApp");
+const VisualSearchStreak_1 = require("./activities/api/VisualSearchStreak");
+const QuestPunchCards_1 = require("./activities/api/QuestPunchCards");
 const UrlReward_1 = require("./activities/api/UrlReward");
 const UrlRewardNew_1 = require("./activities/api/UrlRewardNew");
 const Quiz_1 = require("./activities/api/Quiz");
@@ -28,24 +30,6 @@ class Activities {
             const searchOnBing = new SearchOnBing_1.SearchOnBing(this.bot);
             await searchOnBing.doSearchOnBing(promotion, page);
         };
-        /*
-        doABC = async (page: Page): Promise<void> => {
-            const abc = new ABC(this.bot)
-            await abc.doABC(page)
-        }
-        */
-        /*
-        doPoll = async (page: Page): Promise<void> => {
-            const poll = new Poll(this.bot)
-            await poll.doPoll(page)
-        }
-        */
-        /*
-        doThisOrThat = async (page: Page): Promise<void> => {
-            const thisOrThat = new ThisOrThat(this.bot)
-            await thisOrThat.doThisOrThat(page)
-        }
-        */
         // API Activities
         this.doUrlReward = async (promotion) => {
             const urlReward = new UrlReward_1.UrlReward(this.bot);
@@ -76,6 +60,14 @@ class Activities {
             const streakProtection = new StreakProtection_1.StreakProtection(this.bot);
             await streakProtection.ensureStreakProtection();
         };
+        this.doVisualSearchStreak = async () => {
+            const visualSearch = new VisualSearchStreak_1.VisualSearchStreak(this.bot);
+            await visualSearch.doVisualSearchStreak();
+        };
+        this.doQuestPunchCards = async () => {
+            const questPunchCards = new QuestPunchCards_1.QuestPunchCards(this.bot);
+            await questPunchCards.doQuestPunchCards();
+        };
         // App Activities
         this.doAppReward = async (promotion) => {
             const urlReward = new AppReward_1.AppReward(this.bot);
@@ -98,4 +90,3 @@ class Activities {
     }
 }
 exports.default = Activities;
-//# sourceMappingURL=Activities.js.map
