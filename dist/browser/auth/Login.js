@@ -661,6 +661,42 @@ class Login {
                 return true;
             }
             case 'PASSKEY_ERROR': {
+                const currentUrl = page.url();
+                if (currentUrl.includes('passkey') || currentUrl.includes('interrupt')) {
+                    this.bot.logger.info(this.bot.isMobile, 'LOGIN', '检测到Passkey引导或中断页，尝试跳过');
+                    const skipSelectors = [
+                        this.selectors.secondaryButton,
+                        '#iCancel',
+                        'button#iCancel',
+                        'a#iCancel',
+                        '[data-testid="secondaryButton"]',
+                        'button:has-text("稍后")',
+                        'button:has-text("以后")',
+                        'button:has-text("跳过")',
+                        'button:has-text("取消")',
+                        'button:has-text("不，谢谢")',
+                        'button:has-text("Skip")',
+                        'button:has-text("Not now")',
+                        'button:has-text("Cancel")',
+                        'button:has-text("No thanks")',
+                        'a:has-text("稍后")',
+                        'a:has-text("以后")',
+                        'a:has-text("跳过")',
+                        'a:has-text("取消")'
+                    ];
+                    for (const sel of skipSelectors) {
+                        const btn = await page.$(sel).catch(() => null);
+                        if (btn) {
+                            const isVisible = await btn.isVisible().catch(() => false);
+                            if (isVisible) {
+                                this.bot.logger.info(this.bot.isMobile, 'LOGIN', `点击跳过Passkey按钮: ${sel}`);
+                                await this.bot.browser.utils.ghostClick(page, sel);
+                                await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+                                return true;
+                            }
+                        }
+                    }
+                }
                 if (account?.password) {
                     this.bot.logger.info(this.bot.isMobile, 'LOGIN', '检测到通行密钥错误，尝试切换到密码登录');
                     const switched = await this.switchToPasswordLogin(page);
