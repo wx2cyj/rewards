@@ -2541,7 +2541,7 @@ function renderDashboard(){
     + metric('托管账号数', s.accounts + ' 个', '脱敏展示与独立会话', '👥')
     + metric('运行状态', runStatusText, runStatusHint, isRunning ? '⚡' : '◷')
     + '</div>'
-    + '<div class="split-grid"><section class="card section"><div class="toolbar"><div><h2>账号设置</h2><p class="section-note">密码、TOTP 与代理密码保存后不在页面回显；状态检测会先验证账号是否能登录。</p></div>'+accountActions()+'</div>'+accountTable(3)+'</section>'
+    + '<div class="split-grid"><section class="card section"><div class="toolbar"><div><h2>账号设置</h2><p class="section-note">密码、TOTP 与代理密码保存后不在页面回显；状态检测会先验证账号是否能登录。</p></div>'+accountActions()+'</div>'+accountTable()+'</section>'
     + '<section class="card section"><h2>任务配置</h2><p class="section-note">常用任务开关与执行参数。</p><form id="dashboardTaskForm" class="switch-row">'+taskToggles(3)+'<div class="modal-actions"><button class="primary-btn">保存配置</button></div></form></section></div>'
     + '<section class="card section"><h2>任务进度</h2><p class="section-note">按账号展示本次运行的搜索进度、当前执行任务和具体活动明细。</p>'+taskProgress()+'</section>'
     + '<section class="card section history-chart-card"><div class="toolbar"><div><h2>📈 每日积分增长历史趋势</h2><p class="section-note">直观查看过去各周期内每日积分到账收益。</p></div><div class="chart-controls"><button class="chart-pill active" data-days="7" onclick="switchHistoryRange(7)">7 日</button><button class="chart-pill" data-days="30" onclick="switchHistoryRange(30)">30 日</button></div></div><div class="chart-container" id="historyChartContainer"><div class="empty-state">加载中...</div></div></section>'
