@@ -180,7 +180,50 @@ environment:
 
 > ⚠️ **别调得过猛**：间隔压到 10 秒以内会显著提高被风控审计的概率。`25~60 秒` 是速度与安全之间比较稳妥的平衡点；`20 秒` 建议作为下限。
 
-### 2.5 消息推送（企业微信 / Discord / ntfy / PushPlus）
+> 💡 如果按上面的参数调完，单账号仍需 40 分钟以上，**先别继续压间隔**——先确认镜像版本 ≥ `3.2.2`。旧版本存在搜索积分检测延迟问题，会让搜索阶段空转约 8 分钟/账号，详见 [2.5](#25-搜索阶段空转与积分统计偏低v322-已修复)。
+
+### 2.5 搜索阶段空转与积分统计偏低（v3.2.2 已修复）
+
+**现象**（v3.2.1 及更早）：
+
+- 单账号跑一轮要 **45~50 分钟**，其中搜索阶段独占约 **35 分钟**；
+- 日志里搜索成功与失败**严格交错**：`获得积分=3` → `未获得积分 1/5` → `获得积分=3` → `未获得积分 1/5` ……（多个账号的成功/失败次数几乎完全相同，说明这不是随机风控）；
+- 搜索阶段最后以 `搜索在 5 次迭代中未获得积分，判定为无搜索额度或已达上限，优雅退出` 收尾；
+- 通知与 WebUI 大盘里搜索只记到 **30 分**（目标 60），但账户真实余额增加了 **60 分**。
+
+**根因**：国内账号的接口不下发 `mobileSearch` 计数器，只能走「搜索完成后读取账户余额」的兜底判断（`dist/functions/activities/browser/Search.js`）。而必应入账存在延迟，搜完**立刻**读到的往往还是上涨前的旧值，于是：
+
+1. 每隔一次搜索被误判成「未获得积分」，形成成功/失败交错；
+2. `remaining` 长期虚高——实际已满额，脚本仍以为还差 30 分；
+3. 于是一路空搜，直到连续 5 次失败才判定「无额度」退出，**每个账号因此多耗约 8 分钟**。
+
+**修复**：`v3.2.2` 起新增 `readBalanceSettled()`，首次读取未发现增长时等待 2.5 秒重读一次再判定，使每次到账都能被正确计入，额度归零后立即退出主循环。主搜索循环与 EXTRA 额外搜索循环两处兜底读取均已替换。
+
+**如何确认当前镜像是否包含修复**：
+
+```bash
+docker exec rewards grep -c "readBalanceSettled" \
+  /usr/src/microsoft-rewards-script/dist/functions/activities/browser/Search.js
+# 输出 3 = 已修复（1 处定义 + 2 处调用）；输出 0 或报错 = 仍是旧版
+
+docker exec rewards node -p "require('/usr/src/microsoft-rewards-script/package.json').version"
+# 应为 3.2.2 或更高
+```
+
+**修复前后对比（实测，4 个账号同源数据）**：
+
+| 指标 | v3.2.1 | v3.2.2 |
+| :--- | :--- | :--- |
+| 搜索成功 / 失败次数 | 成功 10 / 失败 16 | 成功约 20 / 失败接近 0 |
+| 搜索阶段耗时 | 约 35 分钟 | 约 27 分钟 |
+| 单账号总耗时 | 约 48 分钟 | 约 40 分钟 |
+| 搜索阶段结束方式 | 连续 5 次失败后退出 | `remaining=0` 自然收敛 |
+| 统计的搜索得分 | 30（实际到账 60） | 60（与实际一致） |
+
+> ⚠️ 升级镜像**不会**重置账号额度或历史记录，只影响下一轮运行。
+> 若升级后仍出现严格交错，请抓现场：`docker logs rewards | grep SEARCH-BING | tail -50`。
+
+### 2.6 消息推送（企业微信 / Discord / ntfy / PushPlus）
 
 推送配置**不在环境变量里**，而是保存在 `config/config.json` 的 `webhook` 节点，WebUI 的「企业微信推送」页保存的也是同一处：
 
@@ -290,6 +333,20 @@ docker logs -f --tail=100 rewards
 docker exec -it rewards tail -n 200 /usr/src/microsoft-rewards-script/logs/runtime.log
 ```
 
+**升级后确认版本真的生效**（`docker compose pull` 有可能因为本地缓存或代理镜像而没拉到最新层）：
+
+```bash
+# 容器内实际的版本号
+docker exec rewards node -p "require('/usr/src/microsoft-rewards-script/package.json').version"
+
+# 镜像 digest，两台机器对比时应完全一致
+docker image inspect ghcr.io/wx2cyj/rewards:latest --format '{{index .RepoDigests 0}}'
+
+# 确认某个补丁是否在镜像里（示例：v3.2.2 的搜索余额修复）
+docker exec rewards grep -c "readBalanceSettled" \
+  /usr/src/microsoft-rewards-script/dist/functions/activities/browser/Search.js
+```
+
 - 镜像**仅支持 `linux/amd64`**（`.github/workflows/docker.yml` 中 `platforms: linux/amd64`），ARM 架构的 NAS 会直接报 `no matching manifest`；
 - 端口可用 `WEB_UI_PORT`（优先）或 `PORT` 覆盖，监听地址可用 `WEB_UI_HOST`（默认 `0.0.0.0`）覆盖；**改容器内端口时记得同步改 healthcheck 与端口映射右侧**，一般只改宿主机侧更省事；
 - 代理注意：代码**不读取** `HTTPS_PROXY` / `HTTP_PROXY` 等系统代理环境变量，只能按账号配置 `ACCOUNT_N_PROXY_URL` / `_PORT` / `_USERNAME` / `_PASSWORD`（一旦填写，浏览器与 API 请求都会走该代理；`ACCOUNT_N_PROXY_AXIOS` 只额外控制 API 这一路）。
@@ -310,3 +367,4 @@ docker exec -it rewards tail -n 200 /usr/src/microsoft-rewards-script/logs/runti
 | 8 | 设了 `HTTPS_PROXY` 完全没效果 | 代码不读系统代理变量 | 按账号配 `ACCOUNT_N_PROXY_*` |
 | 9 | ARM NAS 拉取报 `no matching manifest` | 镜像仅 amd64 | 换 x86_64 设备 |
 | 10 | 挂载点写成 `./config` 后配置不生效 | Compose 后台工作目录变化 | 一律用绝对路径 |
+| 11 | 单账号跑 45~50 分钟，搜索阶段独占 35 分钟；日志里成功/失败严格交错；搜索只记到 30 分但余额涨了 60 | v3.2.1 及更早版本的余额检测存在入账延迟误判（见 [2.5](#25-搜索阶段空转与积分统计偏低v322-已修复)） | 升级到 **v3.2.2+**（`docker compose pull && docker compose up -d`） |
