@@ -34,6 +34,19 @@ class Search extends Workers_1.Workers {
         const accountEmail = this.bot.userData.accountEmail;
         const taskKey = isMobile ? 'mobile' : 'desktop';
         this.bot.logger.info(isMobile, 'SEARCH-BING', `开始必应搜索 | currentPoints=${startBalance}`);
+        // 必应入账存在延迟：搜索完成后立刻读取的余额往往仍是旧值。
+        // 若首次读取未发现增长，短暂等待后重读一次，避免把「已到账」误判成「未获得积分」。
+        // 否则会出现「成功一次 / 失败一次」的严格交错，并使 remaining 长期虚高，
+        // 导致搜索额度已满后仍继续空搜，直到连续 5 次失败才退出。
+        const readBalanceSettled = async () => {
+            const first = await this.bot.browser.func.getCurrentPoints().catch(() => null);
+            if (first !== null && first > startBalance) {
+                return first;
+            }
+            await this.bot.utils.wait(2500).catch(() => { });
+            const second = await this.bot.browser.func.getCurrentPoints().catch(() => null);
+            return second !== null ? second : first;
+        };
         let totalGainedPoints = 0;
         let missingPointsTotal = 0;
         let initialMissingPointsTotal = 0;
@@ -139,7 +152,7 @@ class Search extends Workers_1.Workers {
                 // 若计数器未识别（如国内移动端搜索，接口中 mobileSearch counter 缺失），
                 // 直接通过检测用户实际账户余额变化计算获得积分
                 if (!counterOk) {
-                    const curBal = await this.bot.browser.func.getCurrentPoints().catch(() => null);
+                    const curBal = await readBalanceSettled();
                     const prevBal = Number(this.bot.userData.currentPoints ?? startBalance);
                     if (curBal !== null && curBal > prevBal) {
                         gainedPoints = curBal - prevBal;
@@ -231,7 +244,7 @@ class Search extends Workers_1.Workers {
                         }
 
                         if (!counterOk) {
-                            const curBal = await this.bot.browser.func.getCurrentPoints().catch(() => null);
+                            const curBal = await readBalanceSettled();
                             const prevBal = Number(this.bot.userData.currentPoints ?? startBalance);
                             if (curBal !== null && curBal > prevBal) {
                                 gainedPoints = curBal - prevBal;
