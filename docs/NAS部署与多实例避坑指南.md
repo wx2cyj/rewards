@@ -15,7 +15,7 @@ services:
     container_name: rewards
     restart: unless-stopped
 
-    # Chromium 需要较大的 /dev/shm，Docker 默认只有 64MB，任务跑到一半会崩
+    # 可选保险：Chromium 由 Patchright 启动，已默认注入 --disable-dev-shm-usage，此项非必需（详见第二节）
     shm_size: "1gb"
 
     environment:
@@ -82,7 +82,7 @@ services:
 
 | 项 | 官方版 | 加固版 | 原因 |
 | :--- | :--- | :--- | :--- |
-| `shm_size` | 无 | `1gb` | Chromium 真实使用 `/dev/shm`，默认 64MB 必崩（见第二节） |
+| `shm_size` | 无 | `1gb`（可选保险） | Patchright 已默认注入 `--disable-dev-shm-usage`，`/dev/shm` 不是瓶颈；留着只为兜底 |
 | `logs/` 挂载 | 无 | 有 | 积分历史、断点续跑、任务进度都存在容器内，不挂载重启即丢 |
 | `RUNTIME_LOG_FILE` | 默认 `/var/log/...` | 指到 `logs/` | 运行日志随容器重建丢失 |
 | `healthcheck` | 无 | 有 | 镜像未内置 `HEALTHCHECK` |
@@ -93,26 +93,27 @@ services:
 
 ## 二、三个必须知道的机制
 
-### 2.1 `/dev/shm` 只有 64MB —— 最容易误判的坑
+### 2.1 `/dev/shm` 与 `shm_size` —— 本项目**不需要**
 
-- Docker 容器默认 `/dev/shm` 为 **64MB**；
-- 本项目 Chromium 启动参数（`dist/browser/Browser.js:130` 起的 `BROWSER_ARGS`）**不包含** `--disable-dev-shm-usage`，意味着 Chromium 会真实使用 `/dev/shm`；
-- 多账号 / 多标签页 / 长时间运行时，典型症状是：
+网上常见经验是「Chromium 在容器里会因 `/dev/shm` 只有 64MB 而崩溃，必须加 `shm_size: 1gb`」。**这个结论对本项目不成立**，实测过程如下：
 
-```
-Target page, context or browser has been closed
-```
-
-或任务跑到一半无声中断、容器 `exit 137`。**这个现象极难联想到是 shm 太小，而不是代码问题。**
-
-- 解法：`shm_size: "1gb"`（或 `docker run --shm-size=1g`），并保证宿主机留 2GB 以上可用内存。
-
-验证是否生效：
+1. 项目自身的启动参数（`dist/browser/Browser.js:129-143` 的 `BROWSER_ARGS`）确实**没有** `--disable-dev-shm-usage`；
+2. 但底层由 **Patchright**（Playwright 衍生版）负责拉起 Chromium，而它的内置默认参数里**已经包含** `--disable-dev-shm-usage`（`node_modules/patchright-core/lib/coreBundle.js:34846`）；
+3. 最终以实际运行的进程为准 —— 容器跑任务时执行：
 
 ```bash
-docker exec rewards df -h /dev/shm     # 应为 1.0G
-docker inspect rewards --format '{{.HostConfig.ShmSize}}'   # 应为 1073741824
+docker exec rewards ps aux | grep chrome-headless-shell
 ```
+
+命令行里可以看到 `--disable-dev-shm-usage`，说明 Chromium 的共享内存走 `/tmp` 而非 `/dev/shm`，64MB 的 `/dev/shm` 不会成为瓶颈。
+
+**结论**：`shm_size` 属于**可选的保险措施**，不是必需项。本文示例仍保留 `shm_size: "1gb"`，因为 tmpfs 按需分配、几乎不占实际内存，留着没有坏处；想省掉也完全可以。
+
+> 真正容易导致「任务跑到一半崩溃 / 容器 `exit 137`」的，通常是**容器内存不足被 OOM kill**。排查先看：
+> ```bash
+> docker inspect rewards --format '{{.State.OOMKilled}}'    # true 即内存不足
+> docker stats --no-stream rewards
+> ```
 
 ### 2.2 账号：环境变量与 WebUI **二选一，不能混用**
 
@@ -232,7 +233,7 @@ docker exec -it rewards tail -n 200 /usr/src/microsoft-rewards-script/logs/runti
 
 | # | 现象 | 根因 | 处理 |
 | :--- | :--- | :--- | :--- |
-| 1 | 任务跑到一半浏览器崩溃 / `exit 137` | `/dev/shm` 仅 64MB | 加 `shm_size: "1gb"` |
+| 1 | 任务跑到一半崩溃 / 容器 `exit 137` | 多数是**容器内存不足被 OOM kill**，而非 `/dev/shm`（`--disable-dev-shm-usage` 已由 Patchright 默认注入） | `docker inspect rewards --format '{{.State.OOMKilled}}'` 确认为 true 则加大内存或降低 `clusters` 并发 |
 | 2 | WebUI 里加的账号，重启后消失 | compose 里有 `ACCOUNT_1_EMAIL`，env 覆盖了文件 | env / WebUI 二选一 |
 | 3 | 配了 3 个账号只跑 2 个 | 编号断号，`break` 提前退出 | 编号从 1 连续 |
 | 4 | 重启后管理员密码/配置全丢 | `dist/config` 未挂载或挂错 | 只挂 `dist/config` 目录本身 |
