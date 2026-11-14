@@ -91,7 +91,7 @@ services:
 
 ---
 
-## 二、三个必须知道的机制
+## 二、几个必须知道的机制
 
 ### 2.1 `/dev/shm` 与 `shm_size` —— 本项目**不需要**
 
@@ -143,6 +143,73 @@ docker exec rewards ps aux | grep chrome-headless-shell
 如果两处不一致，会出现"有时按新时间跑、有时按旧时间跑"，甚至两个调度器互抢锁、日志反复打印 `已有任务正在运行中，本次定时触发跳过`。
 
 **建议**：定时时间只在**一处**维护。改了 WebUI 的时间，就同步改 compose 的 `CRON_SCHEDULE` 再重启容器。
+
+### 2.4 执行耗时调优：搜索 / 阅读间隔
+
+镜像默认参数是**非常保守**的：
+
+| 参数 | 默认值 | 含义 |
+| :--- | :--- | :--- |
+| `searchSettings.searchDelay` | `6min` ~ `12min` | 每次搜索之间的等待 |
+| `searchSettings.readDelay` | `6min` ~ `11min` | 每篇资讯阅读之间的等待 |
+| `searchSettings.searchResultVisitTime` | `20sec` | 搜索结果页停留时长 |
+
+按默认值，单账号每天 20 次搜索 × 平均 9 分钟 ≈ **2~3 小时**才能跑完一轮。若按 `0 9,15 * * *` 一天跑两次，上午那轮可能拖到下午，与 15:00 的调度互相挤压（后者会因锁被占用而跳过）。
+
+**推荐的加速参数**（实测单轮压缩到 **10~15 分钟**）：
+
+```yaml
+environment:
+  CONFIG_SEARCH_DELAY_MIN: "25sec"
+  CONFIG_SEARCH_DELAY_MAX: "60sec"
+  CONFIG_SEARCH_READ_DELAY_MIN: "20sec"
+  CONFIG_SEARCH_READ_DELAY_MAX: "45sec"
+  CONFIG_SEARCH_VISIT_TIME: "8sec"
+```
+
+对应的 `CONFIG_*` → `config.json` 映射（`scripts/docker/entrypoint.sh:181-190`）：
+
+| 环境变量 | 配置路径 |
+| :--- | :--- |
+| `CONFIG_SEARCH_DELAY_MIN` / `_MAX` | `.searchSettings.searchDelay.min` / `.max` |
+| `CONFIG_SEARCH_READ_DELAY_MIN` / `_MAX` | `.searchSettings.readDelay.min` / `.max` |
+| `CONFIG_SEARCH_VISIT_TIME` | `.searchSettings.searchResultVisitTime` |
+| `CONFIG_SEARCH_SCROLL_RANDOM` / `_CLICK_RANDOM` | `.searchSettings.scrollRandomResults` / `.clickRandomResults` |
+| `CONFIG_SEARCH_PARALLEL` | `.searchSettings.parallelSearching` |
+| `CONFIG_SEARCH_ON_BING_LOCAL` | `.searchOnBingLocalQueries` |
+
+> ⚠️ **别调得过猛**：间隔压到 10 秒以内会显著提高被风控审计的概率。`25~60 秒` 是速度与安全之间比较稳妥的平衡点；`20 秒` 建议作为下限。
+
+### 2.5 消息推送（企业微信 / Discord / ntfy / PushPlus）
+
+推送配置**不在环境变量里**，而是保存在 `config/config.json` 的 `webhook` 节点，WebUI 的「企业微信推送」页保存的也是同一处：
+
+```json
+{
+  "webhook": {
+    "wecom": {
+      "enabled": true,
+      "corpId": "ww***********",
+      "agentId": "1000002",
+      "corpSecret": "***********",
+      "toUser": "@all",
+      "proxyMode": "direct",
+      "proxyBaseUrl": ""
+    },
+    "discord": { "enabled": false },
+    "ntfy": { "enabled": false },
+    "pushplus": { "enabled": false }
+  }
+}
+```
+
+几个要点：
+
+1. **必须挂载 `dist/config`**，否则容器重建后推送配置全部丢失；
+2. `webhook.wecom` 里的 `corpSecret` 是**明文**，`config.json` 请一并收紧到 `600`；
+3. `proxyMode` / `proxyBaseUrl` 用于让容器经一个中转地址访问企业微信接口（当 NAS 所在网络访问腾讯 API 不稳定时很有用）。**注意中转地址必须是本机能访问到的**——如果填的是另一套部署所在内网的地址，跨机房就发不出去；
+4. 多实例场景：每个实例的推送是**独立**的，各自跑完各自发。若两套实例都推同一个群，消息会翻倍，按需只开一套或配不同 `toUser`；
+5. 推送在**每轮任务结束时**触发一次，想单独验证渠道是否通畅，可在 WebUI 的推送设置页点「测试」。
 
 ---
 
